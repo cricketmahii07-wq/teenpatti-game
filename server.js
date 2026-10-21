@@ -42,6 +42,27 @@ function decideWinner(p1, p2) {
   return p2;
 }
 
+function resetTimer(room) {
+  if (room.timer) clearInterval(room.timer);
+  room.timeLeft = 30;
+
+  room.timer = setInterval(() => {
+    room.timeLeft--;
+    io.to(room.id).emit('timerUpdate', { timeLeft: room.timeLeft });
+
+    if (room.timeLeft <= 0) {
+      clearInterval(room.timer);
+      // Auto Fold if inactive
+      const activePlayer = room.players[room.activeIdx];
+      if (activePlayer && !activePlayer.folded) {
+        activePlayer.folded = true;
+        io.to(room.id).emit('playerMessage', `${activePlayer.name} timed out aur Fold ho gaya!`);
+        nextTurn(room);
+      }
+    }
+  }, 1000);
+}
+
 function startRound(room) {
   let deck = [];
   SUITS.forEach(s => RANKS.forEach(r => deck.push({ suit: s, rank: r })));
@@ -60,24 +81,27 @@ function startRound(room) {
   });
 
   room.activeIdx = 0;
+  resetTimer(room);
 }
 
-function sanitizeRoomState(room, socketId) {
+function sanitizeRoomState(room, playerId) {
   return {
     roomId: room.id,
     pot: room.pot,
     currentBet: room.currentBet,
     activeIdx: room.activeIdx,
     lastMoveWasSeen: room.lastMoveWasSeen,
+    timeLeft: room.timeLeft || 30,
     players: room.players.map((p) => ({
       id: p.id,
       name: p.name,
       chips: p.chips,
       state: p.state,
       folded: p.folded,
-      isYou: p.socketId === socketId,
-      cards: (p.socketId === socketId && p.state === 'seen') ? p.cards : null,
-      unitScore: (p.socketId === socketId && p.state === 'seen') ? getUnitScore(p.cards) : null,
+      isOnline: p.isOnline,
+      isYou: p.id === playerId,
+      cards: (p.id === playerId && p.state === 'seen') ? p.cards : null,
+      unitScore: (p.id === playerId && p.state === 'seen') ? getUnitScore(p.cards) : null,
     }))
   };
 }
@@ -86,14 +110,17 @@ function broadcastRoom(roomId) {
   const room = rooms[roomId];
   if (!room) return;
   room.players.forEach(p => {
-    io.to(p.socketId).emit('gameState', sanitizeRoomState(room, p.socketId));
+    if (p.socketId) {
+      io.to(p.socketId).emit('gameState', sanitizeRoomState(room, p.id));
+    }
   });
 }
 
 function nextTurn(room) {
   let alive = room.players.filter(p => !p.folded);
   if (alive.length <= 1) {
-    let winner = alive[0];
+    if (room.timer) clearInterval(room.timer);
+    let winner = alive[0] || room.players[0];
     winner.chips += room.pot;
     io.to(room.id).emit('gameOver', { message: `${winner.name} won ₹${room.pot}!` });
     setTimeout(() => {
@@ -107,79 +134,103 @@ function nextTurn(room) {
     room.activeIdx = (room.activeIdx + 1) % room.players.length;
   } while (room.players[room.activeIdx].folded);
 
+  resetTimer(room);
   broadcastRoom(room.id);
 }
 
 io.on('connection', (socket) => {
-  socket.on('createRoom', ({ name }) => {
-    const roomId = Math.floor(1000 + Math.random() * 9000).toString();
-    rooms[roomId] = {
-      id: roomId,
-      pot: 0,
-      currentBet: 1,
-      activeIdx: 0,
-      lastMoveWasSeen: false,
-      players: [{
-        id: 0,
-        socketId: socket.id,
-        name: name || 'Host',
-        chips: 500,
-        state: 'blind',
-        cards: [],
-        folded: false
-      }]
-    };
-    socket.join(roomId);
-    socket.emit('roomCreated', { roomId });
-    broadcastRoom(roomId);
-  });
+  // Join ya Reconnect
+  socket.on('joinOrCreateRoom', ({ roomId, playerId, name }) => {
+    let room = rooms[roomId];
 
-  socket.on('joinRoom', ({ roomId, name }) => {
-    const room = rooms[roomId];
-    if (!room) return socket.emit('errorMsg', 'Room code nahi mila!');
+    // Room exist nahi karta toh naya banayein
+    if (!room) {
+      room = {
+        id: roomId,
+        pot: 0,
+        currentBet: 1,
+        activeIdx: 0,
+        lastMoveWasSeen: false,
+        players: [],
+        timer: null,
+        timeLeft: 30
+      };
+      rooms[roomId] = room;
+    }
+
+    // Check agar player pehle se tha (Reconnect)
+    let existingPlayer = room.players.find(p => p.id === playerId);
+    if (existingPlayer) {
+      existingPlayer.socketId = socket.id;
+      existingPlayer.isOnline = true;
+      socket.join(roomId);
+      broadcastRoom(roomId);
+      return;
+    }
+
+    // Naya player join
     if (room.players.length >= 10) return socket.emit('errorMsg', 'Table full hai (Max 10)!');
 
-    room.players.push({
-      id: room.players.length,
+    const newPlayer = {
+      id: playerId,
       socketId: socket.id,
       name: name || `Player ${room.players.length + 1}`,
       chips: 500,
       state: 'blind',
       cards: [],
-      folded: false
-    });
+      folded: false,
+      isOnline: true
+    };
 
+    room.players.push(newPlayer);
     socket.join(roomId);
-    if (room.players.length === 2) startRound(room);
+
+    if (room.players.length === 2 && room.pot === 0) {
+      startRound(room);
+    }
     broadcastRoom(roomId);
   });
 
-  socket.on('action', ({ roomId, type, amount }) => {
+  socket.on('action', ({ roomId, playerId, type, amount }) => {
     const room = rooms[roomId];
     if (!room) return;
     const player = room.players[room.activeIdx];
-    if (player.socketId !== socket.id) return socket.emit('errorMsg', 'Aapki turn nahi hai!');
+    if (!player || player.id !== playerId) return socket.emit('errorMsg', 'Aapki turn nahi hai!');
 
     if (type === 'SEE') {
       player.state = 'seen';
       broadcastRoom(roomId);
-    } else if (type === 'CHAAL') {
-      let raise = amount || (room.currentBet + 1);
+      return;
+    }
+
+    if (type === 'CHAAL') {
+      let raise = parseInt(amount);
+      if (isNaN(raise) || raise <= room.currentBet) {
+        return socket.emit('errorMsg', `Chaal amount current bet ₹${room.currentBet} se zyada hona chahiye!`);
+      }
+      if (player.chips < raise) return socket.emit('errorMsg', 'Balance kam hai!');
+
       player.chips -= raise;
       room.pot += raise;
       room.currentBet = raise;
       room.lastMoveWasSeen = (player.state === 'seen');
       nextTurn(room);
     } else if (type === 'BAND') {
-      if (player.state !== 'blind') return;
+      if (player.state !== 'blind') return socket.emit('errorMsg', 'Sirf Blind player BAND kar sakta hai!');
+      if (player.chips < room.currentBet) return socket.emit('errorMsg', 'Balance kam hai!');
+
       player.chips -= room.currentBet;
       room.pot += room.currentBet;
       room.currentBet *= 2;
       room.lastMoveWasSeen = false;
       nextTurn(room);
     } else if (type === 'COUNTER') {
-      if (player.state !== 'blind' || !room.lastMoveWasSeen) return;
+      if (player.state !== 'blind' || !room.lastMoveWasSeen) {
+        return socket.emit('errorMsg', 'Counter tabhi chalega jab samne wale ne SEEN chala ho!');
+      }
       let counterBet = room.currentBet * 3;
+      if (player.chips < counterBet) return socket.emit('errorMsg', 'Balance kam hai!');
+
       player.chips -= counterBet;
       room.pot += counterBet;
       room.currentBet = counterBet;
@@ -190,9 +241,11 @@ io.on('connection', (socket) => {
       nextTurn(room);
     } else if (type === 'SHOW') {
       let alive = room.players.filter(p => !p.folded);
-      if (alive.length > 2) return socket.emit('errorMsg', 'Show sirf 2 players me hoga!');
+      if (alive.length > 2) return socket.emit('errorMsg', 'Show sirf 2 players bache hone par hoga!');
+      if (room.timer) clearInterval(room.timer);
+
       let caller = player;
-      let opp = alive.find(p => p.socketId !== caller.socketId);
+      let opp = alive.find(p => p.id !== caller.id);
       let winner = decideWinner(caller, opp);
       winner.chips += room.pot;
 
@@ -215,7 +268,7 @@ io.on('connection', (socket) => {
       const room = rooms[rId];
       const p = room.players.find(x => x.socketId === socket.id);
       if (p) {
-        p.folded = true;
+        p.isOnline = false;
         broadcastRoom(rId);
         break;
       }
@@ -225,4 +278,3 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-      

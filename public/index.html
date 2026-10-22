@@ -9,30 +9,31 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
     body { background: #07120a; color: #fff; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
     
-    /* Login / Setup Screen */
-    #joinOverlay { position: fixed; inset: 0; background: #0d1e13; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
-    input { padding: 12px; border-radius: 8px; border: 1px solid #2e7d32; background: #051009; color: #fff; width: 240px; text-align: center; font-size: 16px; }
-    .action-btn { padding: 12px 24px; border: none; border-radius: 8px; background: #ffd700; color: #000; font-weight: bold; cursor: pointer; width: 240px; font-size: 15px; }
+    /* Login & Room Modals */
+    .overlay { position: fixed; inset: 0; background: #0d1e13; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+    input { padding: 12px; border-radius: 8px; border: 1px solid #2e7d32; background: #051009; color: #fff; width: 250px; text-align: center; font-size: 15px; }
+    .action-btn { padding: 12px; border: none; border-radius: 8px; background: #ffd700; color: #000; font-weight: bold; cursor: pointer; width: 250px; font-size: 15px; }
+    .profile-card { background: rgba(0,0,0,0.6); border: 1px solid #d4af37; border-radius: 10px; padding: 12px; width: 250px; text-align: center; font-size: 13px; line-height: 1.6; }
 
-    /* Top Bar with Timer */
+    /* Top Bar */
     .top { padding: 8px 12px; background: #030a05; display: flex; justify-content: space-between; align-items: center; z-index: 10; border-bottom: 1px solid #143d22; }
     .timer-badge { background: #d32f2f; color: #fff; padding: 3px 10px; border-radius: 12px; font-weight: bold; font-size: 13px; }
 
-    /* Casino Table Area */
+    /* Table */
     .table-box { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; margin-bottom: 120px; }
     .oval-table { width: 92%; max-width: 480px; height: 460px; background: radial-gradient(circle, #195e34, #0b2e18); border: 10px solid #3e2723; border-radius: 120px; position: relative; }
-    .pot-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.75); border: 2px solid #ffd700; padding: 8px 16px; border-radius: 20px; text-align: center; z-index: 5; }
+    .pot-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); border: 2px solid #ffd700; padding: 8px 16px; border-radius: 20px; text-align: center; z-index: 5; }
     
     /* Seats */
-    .seat { position: absolute; width: 95px; text-align: center; transition: all 0.2s; }
+    .seat { position: absolute; width: 95px; text-align: center; }
     .seat.active .p-box { border-color: #ffd700; box-shadow: 0 0 12px #ffd700; }
-    .p-box { background: rgba(0,0,0,0.7); border: 2px solid #333; border-radius: 10px; padding: 4px; font-size: 11px; }
+    .p-box { background: rgba(0,0,0,0.75); border: 2px solid #333; border-radius: 10px; padding: 4px; font-size: 11px; }
     .cards-box { display: flex; justify-content: center; gap: 3px; margin-top: 4px; }
     .card { width: 28px; height: 42px; background: #fff; color: #000; border-radius: 4px; font-weight: bold; font-size: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
     .card.back { background: repeating-linear-gradient(45deg, #1565c0, #1565c0 3px, #0d47a1 3px, #0d47a1 6px); color: #fff; }
     .card.red { color: #d32f2f; }
 
-    /* Raised Action Controls (Thoda Upar) */
+    /* Action Controls */
     .bottom-bar { 
       position: fixed; bottom: 15px; left: 8px; right: 8px; 
       background: rgba(3, 10, 5, 0.95); padding: 10px; border-radius: 12px;
@@ -56,22 +57,30 @@
 </head>
 <body>
 
-  <!-- Join/Reconnect Dialog -->
-  <div id="joinOverlay">
-    <h2 style="color:#ffd700;">♠ CUSTOM TEEN PATTI</h2>
-    <input type="text" id="username" placeholder="Aapka Naam">
-    <input type="text" id="roomCodeInput" placeholder="Room Code (e.g. 1234)">
-    <button class="action-btn" onclick="enterRoom()">ENTER TABLE</button>
+  <!-- Screen 1: Mobile Login -->
+  <div id="loginOverlay" class="overlay">
+    <h2 style="color:#ffd700;">♠ MOBILE LOGIN</h2>
+    <input type="tel" id="userPhone" placeholder="10 Digit Mobile Number" maxlength="10">
+    <input type="password" id="userPin" placeholder="4-Digit Secret PIN" maxlength="4">
+    <input type="text" id="userName" placeholder="Aapka Naam (New player)">
+    <button class="action-btn" onclick="submitAuth()">LOGIN / REGISTER</button>
   </div>
 
-  <!-- Header -->
+  <!-- Screen 2: Profile & Table Join -->
+  <div id="roomOverlay" class="overlay" style="display:none;">
+    <h2 style="color:#ffd700;">PLAYER PROFILE</h2>
+    <div class="profile-card" id="profileStats">Loading stats...</div>
+    <input type="text" id="roomCodeInput" placeholder="Room Code (e.g. 1234)">
+    <button class="action-btn" onclick="enterRoom()">JOIN / CREATE TABLE</button>
+  </div>
+
+  <!-- Main Game Screen -->
   <div class="top">
     <div>Room: <b id="displayRoomId" style="color:#ffd700;">-</b></div>
     <div id="timerDisplay" class="timer-badge">⏳ 30s</div>
     <div id="turnText" style="color:#00e676; font-weight:bold; font-size:12px;">Waiting...</div>
   </div>
 
-  <!-- Table -->
   <div class="table-box">
     <div class="oval-table" id="tableSeats">
       <div class="pot-center">
@@ -81,10 +90,8 @@
     </div>
   </div>
 
-  <!-- Upward Positioned Action Panel -->
   <div class="bottom-bar">
-    <!-- Custom Chaal Controls -->
-    <div class="custom-chaal-row" id="chaalControls">
+    <div class="custom-chaal-row">
       <button class="chip-btn" onclick="adjustChaal(1)">+1</button>
       <button class="chip-btn" onclick="adjustChaal(5)">+5</button>
       <button class="chip-btn" onclick="adjustChaal(10)">+10</button>
@@ -92,7 +99,6 @@
       <button class="btn btn-chaal" style="flex: initial; padding: 8px 16px;" id="btnChaal" onclick="submitChaal()">CHAAL</button>
     </div>
 
-    <!-- Power Actions -->
     <div class="btn-row">
       <button class="btn btn-see" id="btnSee" onclick="sendAction('SEE')">SEE</button>
       <button class="btn btn-band" id="btnBand" onclick="sendAction('BAND')">BAND (2x)</button>
@@ -105,30 +111,63 @@
   <script>
     const socket = io();
     let currentRoomId = null;
-    let myPlayerId = localStorage.getItem('teenpatti_pid') || ('p_' + Math.random().toString(36).substr(2, 9));
-    localStorage.setItem('teenpatti_pid', myPlayerId);
+    let currentUser = null;
 
-    // Auto reconnect agar pehle se room join tha
+    // Auto-login agar saved credentials ho
     window.addEventListener('load', () => {
-      let savedRoom = localStorage.getItem('teenpatti_room');
-      let savedName = localStorage.getItem('teenpatti_name');
-      if (savedRoom && savedName) {
-        document.getElementById('username').value = savedName;
+      let savedPhone = localStorage.getItem('tp_phone');
+      let savedPin = localStorage.getItem('tp_pin');
+      if (savedPhone && savedPin) {
+        document.getElementById('userPhone').value = savedPhone;
+        document.getElementById('userPin').value = savedPin;
+        submitAuth();
+      }
+    });
+
+    function submitAuth() {
+      const phone = document.getElementById('userPhone').value.trim();
+      const pin = document.getElementById('userPin').value.trim();
+      const name = document.getElementById('userName').value.trim();
+
+      if (phone.length < 10 || pin.length < 4) {
+        return alert('Mobile number 10 digit aur PIN 4 digit hona chahiye!');
+      }
+
+      socket.emit('authLogin', { phone, pin, name });
+    }
+
+    socket.on('authError', (msg) => alert(msg));
+
+    socket.on('authSuccess', (userData) => {
+      currentUser = userData;
+      localStorage.setItem('tp_phone', userData.phone);
+      localStorage.setItem('tp_pin', document.getElementById('userPin').value.trim());
+
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('roomOverlay').style.display = 'flex';
+
+      // Show Stats
+      let winRate = userData.gamesPlayed ? Math.round((userData.gamesWon / userData.gamesPlayed) * 100) : 0;
+      document.getElementById('profileStats').innerHTML = `
+        <b style="color:#ffd700; font-size:15px;">${userData.name}</b><br>
+        📱 ${userData.phone}<br>
+        💰 Wallet Chips: <b>₹${userData.chips}</b><br>
+        🎮 Games: <b>${userData.gamesPlayed}</b> | Won: <b>${userData.gamesWon}</b> (${winRate}%)
+      `;
+
+      let savedRoom = localStorage.getItem('tp_room');
+      if (savedRoom) {
         document.getElementById('roomCodeInput').value = savedRoom;
-        enterRoom();
       }
     });
 
     function enterRoom() {
-      const name = document.getElementById('username').value.trim();
       const roomId = document.getElementById('roomCodeInput').value.trim();
-      if (!name || !roomId) return alert('Naam aur Room Code daalein!');
+      if (!roomId) return alert('Room Code dalein!');
 
-      localStorage.setItem('teenpatti_room', roomId);
-      localStorage.setItem('teenpatti_name', name);
-
+      localStorage.setItem('tp_room', roomId);
       currentRoomId = roomId;
-      socket.emit('joinOrCreateRoom', { roomId, playerId: myPlayerId, name });
+      socket.emit('joinOrCreateRoom', { roomId, phone: currentUser.phone });
     }
 
     socket.on('errorMsg', (msg) => alert(msg));
@@ -141,11 +180,10 @@
     socket.on('gameState', (state) => {
       currentRoomId = state.roomId;
       document.getElementById('displayRoomId').innerText = state.roomId;
-      document.getElementById('joinOverlay').style.display = 'none';
+      document.getElementById('roomOverlay').style.display = 'none';
       document.getElementById('potAmount').innerText = state.pot;
       document.getElementById('betAmount').innerText = state.currentBet;
 
-      // Minimum next chaal
       let minNext = state.currentBet + 1;
       let chaalInput = document.getElementById('customChaalInput');
       if (!chaalInput.value || parseInt(chaalInput.value) <= state.currentBet) {
@@ -158,7 +196,6 @@
       let you = state.players.find(p => p.isYou);
       let isYourTurn = you && activeP && activeP.id === you.id;
 
-      // Buttons Control
       document.getElementById('btnSee').disabled = !(isYourTurn && you.state === 'blind');
       document.getElementById('btnBand').disabled = !(isYourTurn && you.state === 'blind');
       document.getElementById('btnCounter').disabled = !(isYourTurn && you.state === 'blind' && state.lastMoveWasSeen);
@@ -182,13 +219,13 @@
     }
 
     function sendAction(type, amount) {
-      socket.emit('action', { roomId: currentRoomId, playerId: myPlayerId, type, amount });
+      socket.emit('action', { roomId: currentRoomId, phone: currentUser.phone, type, amount });
     }
 
     socket.on('gameOver', ({ message }) => alert(message));
 
     socket.on('showResult', (res) => {
-      alert(`🏆 Winner: ${res.winnerName} won ₹${res.pot}!\n\n${res.p1.name}: ${res.p1.cards.map(c=>c.rank+c.suit).join(' ')} (Pt: ${res.p1.score})\n${res.p2.name}: ${res.p2.cards.map(c=>c.rank+c.suit).join(' ')} (Pt: ${res.p2.score})`);
+      alert(`🏆 Winner: ${res.winnerName} won ₹${res.pot}!\n\n${res.p1.name}: ${res.p1.cards.map(c=>c.rank+c.suit).join(' ')} (Score: ${res.p1.score})\n${res.p2.name}: ${res.p2.cards.map(c=>c.rank+c.suit).join(' ')} (Score: ${res.p2.score})`);
     });
 
     function renderTable(players, activeIdx) {

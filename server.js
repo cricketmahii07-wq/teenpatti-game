@@ -2,15 +2,57 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const mongoose = require('mongoose');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json());
 
+// --- Database Schema (MongoDB Atlas ya Local Memory) ---
+const MONGO_URI = process.env.MONGO_URI || ""; // Render Environment Variable se lega
+let useMongo = false;
+
+const userSchema = new mongoose.Schema({
+  phone: { type: String, unique: true, required: true },
+  name: { type: String, default: "Player" },
+  pin: { type: String, required: true },
+  chips: { type: Number, default: 1000 },
+  gamesPlayed: { type: Number, default: 0 },
+  gamesWon: { type: Number, default: 0 }
+});
+const User = mongoose.model('User', userSchema);
+
+if (MONGO_URI) {
+  mongoose.connect(MONGO_URI)
+    .then(() => { console.log("MongoDB Connected!"); useMongo = true; })
+    .catch(err => console.log("Mongo error, fallback to memory:", err));
+}
+
+// In-Memory Storage (agar MongoDB set na ho tab bhi chalega)
+const memoryUsers = {};
+
+async function getUser(phone) {
+  if (useMongo) return await User.findOne({ phone });
+  return memoryUsers[phone] || null;
+}
+
+async function saveUser(userData) {
+  if (useMongo) {
+    let u = await User.findOne({ phone: userData.phone });
+    if (!u) u = new User(userData);
+    else Object.assign(u, userData);
+    return await u.save();
+  } else {
+    memoryUsers[userData.phone] = userData;
+    return userData;
+  }
+}
+
+// --- Game Logic ---
 const rooms = {};
-
 const SUITS = ['♠', '♥', '♦', '♣'];
 const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
@@ -52,7 +94,6 @@ function resetTimer(room) {
 
     if (room.timeLeft <= 0) {
       clearInterval(room.timer);
-      // Auto Fold if inactive
       const activePlayer = room.players[room.activeIdx];
       if (activePlayer && !activePlayer.folded) {
         activePlayer.folded = true;
@@ -61,6 +102,32 @@ function resetTimer(room) {
       }
     }
   }, 1000);
+}
+
+async function finishGame(room, winner) {
+  if (room.timer) clearInterval(room.timer);
+  winner.chips += room.pot;
+
+  // Track record database me update karein
+  for (let p of room.players) {
+    let u = await getUser(p.phone);
+    if (u) {
+      u.chips = p.chips;
+      u.gamesPlayed = (u.gamesPlayed || 0) + 1;
+      if (p.id === winner.id) u.gamesWon = (u.gamesWon || 0) + 1;
+      await saveUser(u);
+    }
+  }
+
+  io.to(room.id).emit('gameOver', { 
+    message: `🏆 ${winner.name} won ₹${room.pot}!`,
+    winnerPhone: winner.phone 
+  });
+
+  setTimeout(() => {
+    startRound(room);
+    broadcastRoom(room.id);
+  }, 5000);
 }
 
 function startRound(room) {
@@ -73,7 +140,7 @@ function startRound(room) {
   room.lastMoveWasSeen = false;
 
   room.players.forEach(p => {
-    p.chips -= 1;
+    p.chips -= 1; // Boot ₹1
     room.pot += 1;
     p.state = 'blind';
     p.folded = false;
@@ -84,7 +151,7 @@ function startRound(room) {
   resetTimer(room);
 }
 
-function sanitizeRoomState(room, playerId) {
+function sanitizeRoomState(room, phone) {
   return {
     roomId: room.id,
     pot: room.pot,
@@ -94,14 +161,15 @@ function sanitizeRoomState(room, playerId) {
     timeLeft: room.timeLeft || 30,
     players: room.players.map((p) => ({
       id: p.id,
+      phone: p.phone,
       name: p.name,
       chips: p.chips,
       state: p.state,
       folded: p.folded,
       isOnline: p.isOnline,
-      isYou: p.id === playerId,
-      cards: (p.id === playerId && p.state === 'seen') ? p.cards : null,
-      unitScore: (p.id === playerId && p.state === 'seen') ? getUnitScore(p.cards) : null,
+      isYou: p.phone === phone,
+      cards: (p.phone === phone && p.state === 'seen') ? p.cards : null,
+      unitScore: (p.phone === phone && p.state === 'seen') ? getUnitScore(p.cards) : null,
     }))
   };
 }
@@ -111,7 +179,7 @@ function broadcastRoom(roomId) {
   if (!room) return;
   room.players.forEach(p => {
     if (p.socketId) {
-      io.to(p.socketId).emit('gameState', sanitizeRoomState(room, p.id));
+      io.to(p.socketId).emit('gameState', sanitizeRoomState(room, p.phone));
     }
   });
 }
@@ -119,14 +187,8 @@ function broadcastRoom(roomId) {
 function nextTurn(room) {
   let alive = room.players.filter(p => !p.folded);
   if (alive.length <= 1) {
-    if (room.timer) clearInterval(room.timer);
     let winner = alive[0] || room.players[0];
-    winner.chips += room.pot;
-    io.to(room.id).emit('gameOver', { message: `${winner.name} won ₹${room.pot}!` });
-    setTimeout(() => {
-      startRound(room);
-      broadcastRoom(room.id);
-    }, 4000);
+    finishGame(room, winner);
     return;
   }
 
@@ -139,11 +201,46 @@ function nextTurn(room) {
 }
 
 io.on('connection', (socket) => {
-  // Join ya Reconnect
-  socket.on('joinOrCreateRoom', ({ roomId, playerId, name }) => {
-    let room = rooms[roomId];
+  // Mobile Login / Register
+  socket.on('authLogin', async ({ phone, pin, name }) => {
+    if (!phone || phone.length < 10 || !pin) {
+      return socket.emit('authError', 'Kripya sahi 10-digit mobile number aur 4-digit PIN dalein!');
+    }
 
-    // Room exist nahi karta toh naya banayein
+    let user = await getUser(phone);
+    if (!user) {
+      // Naya Account
+      user = {
+        phone,
+        name: name || `Player_${phone.slice(-4)}`,
+        pin,
+        chips: 1000,
+        gamesPlayed: 0,
+        gamesWon: 0
+      };
+      await saveUser(user);
+    } else {
+      // Purana Account check PIN
+      if (user.pin !== pin) {
+        return socket.emit('authError', 'Galat PIN! Dubara koshish karein.');
+      }
+    }
+
+    socket.emit('authSuccess', {
+      phone: user.phone,
+      name: user.name,
+      chips: user.chips,
+      gamesPlayed: user.gamesPlayed,
+      gamesWon: user.gamesWon
+    });
+  });
+
+  // Table Join
+  socket.on('joinOrCreateRoom', async ({ roomId, phone }) => {
+    const user = await getUser(phone);
+    if (!user) return socket.emit('errorMsg', 'Session expire ho gaya, dubara login karein.');
+
+    let room = rooms[roomId];
     if (!room) {
       room = {
         id: roomId,
@@ -158,44 +255,42 @@ io.on('connection', (socket) => {
       rooms[roomId] = room;
     }
 
-    // Check agar player pehle se tha (Reconnect)
-    let existingPlayer = room.players.find(p => p.id === playerId);
-    if (existingPlayer) {
-      existingPlayer.socketId = socket.id;
-      existingPlayer.isOnline = true;
+    // Reconnect Check
+    let p = room.players.find(x => x.phone === phone);
+    if (p) {
+      p.socketId = socket.id;
+      p.isOnline = true;
       socket.join(roomId);
       broadcastRoom(roomId);
       return;
     }
 
-    // Naya player join
-    if (room.players.length >= 10) return socket.emit('errorMsg', 'Table full hai (Max 10)!');
+    if (room.players.length >= 10) return socket.emit('errorMsg', 'Table Full hai (Max 10)!');
 
-    const newPlayer = {
-      id: playerId,
+    room.players.push({
+      id: 'p_' + phone,
+      phone: user.phone,
       socketId: socket.id,
-      name: name || `Player ${room.players.length + 1}`,
-      chips: 500,
+      name: user.name,
+      chips: user.chips,
       state: 'blind',
       cards: [],
       folded: false,
       isOnline: true
-    };
+    });
 
-    room.players.push(newPlayer);
     socket.join(roomId);
-
     if (room.players.length === 2 && room.pot === 0) {
       startRound(room);
     }
     broadcastRoom(roomId);
   });
 
-  socket.on('action', ({ roomId, playerId, type, amount }) => {
+  socket.on('action', ({ roomId, phone, type, amount }) => {
     const room = rooms[roomId];
     if (!room) return;
     const player = room.players[room.activeIdx];
-    if (!player || player.id !== playerId) return socket.emit('errorMsg', 'Aapki turn nahi hai!');
+    if (!player || player.phone !== phone) return socket.emit('errorMsg', 'Aapki turn nahi hai!');
 
     if (type === 'SEE') {
       player.state = 'seen';
@@ -206,7 +301,7 @@ io.on('connection', (socket) => {
     if (type === 'CHAAL') {
       let raise = parseInt(amount);
       if (isNaN(raise) || raise <= room.currentBet) {
-        return socket.emit('errorMsg', `Chaal amount current bet ₹${room.currentBet} se zyada hona chahiye!`);
+        return socket.emit('errorMsg', `Chaal amount ₹${room.currentBet} se zyada honi chahiye!`);
       }
       if (player.chips < raise) return socket.emit('errorMsg', 'Balance kam hai!');
 
@@ -242,12 +337,10 @@ io.on('connection', (socket) => {
     } else if (type === 'SHOW') {
       let alive = room.players.filter(p => !p.folded);
       if (alive.length > 2) return socket.emit('errorMsg', 'Show sirf 2 players bache hone par hoga!');
-      if (room.timer) clearInterval(room.timer);
-
+      
       let caller = player;
-      let opp = alive.find(p => p.id !== caller.id);
+      let opp = alive.find(p => p.phone !== caller.phone);
       let winner = decideWinner(caller, opp);
-      winner.chips += room.pot;
 
       io.to(roomId).emit('showResult', {
         winnerName: winner.name,
@@ -256,10 +349,7 @@ io.on('connection', (socket) => {
         p2: { name: opp.name, cards: opp.cards, score: getUnitScore(opp.cards) },
       });
 
-      setTimeout(() => {
-        startRound(room);
-        broadcastRoom(roomId);
-      }, 5000);
+      finishGame(room, winner);
     }
   });
 

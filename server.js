@@ -2,7 +2,6 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const mongoose = require('mongoose');
 
 const app = express();
 const server = http.createServer(app);
@@ -11,47 +10,11 @@ const io = new Server(server, { cors: { origin: '*' } });
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// --- Database Schema (MongoDB Atlas ya Local Memory) ---
-const MONGO_URI = process.env.MONGO_URI || ""; // Render Environment Variable se lega
-let useMongo = false;
+// In-Memory Database (Phone -> User & OTP)
+const users = {};
+const pendingOtps = {};
 
-const userSchema = new mongoose.Schema({
-  phone: { type: String, unique: true, required: true },
-  name: { type: String, default: "Player" },
-  pin: { type: String, required: true },
-  chips: { type: Number, default: 1000 },
-  gamesPlayed: { type: Number, default: 0 },
-  gamesWon: { type: Number, default: 0 }
-});
-const User = mongoose.model('User', userSchema);
-
-if (MONGO_URI) {
-  mongoose.connect(MONGO_URI)
-    .then(() => { console.log("MongoDB Connected!"); useMongo = true; })
-    .catch(err => console.log("Mongo error, fallback to memory:", err));
-}
-
-// In-Memory Storage (agar MongoDB set na ho tab bhi chalega)
-const memoryUsers = {};
-
-async function getUser(phone) {
-  if (useMongo) return await User.findOne({ phone });
-  return memoryUsers[phone] || null;
-}
-
-async function saveUser(userData) {
-  if (useMongo) {
-    let u = await User.findOne({ phone: userData.phone });
-    if (!u) u = new User(userData);
-    else Object.assign(u, userData);
-    return await u.save();
-  } else {
-    memoryUsers[userData.phone] = userData;
-    return userData;
-  }
-}
-
-// --- Game Logic ---
+// Game Engine Memory
 const rooms = {};
 const SUITS = ['♠', '♥', '♦', '♣'];
 const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -104,32 +67,6 @@ function resetTimer(room) {
   }, 1000);
 }
 
-async function finishGame(room, winner) {
-  if (room.timer) clearInterval(room.timer);
-  winner.chips += room.pot;
-
-  // Track record database me update karein
-  for (let p of room.players) {
-    let u = await getUser(p.phone);
-    if (u) {
-      u.chips = p.chips;
-      u.gamesPlayed = (u.gamesPlayed || 0) + 1;
-      if (p.id === winner.id) u.gamesWon = (u.gamesWon || 0) + 1;
-      await saveUser(u);
-    }
-  }
-
-  io.to(room.id).emit('gameOver', { 
-    message: `🏆 ${winner.name} won ₹${room.pot}!`,
-    winnerPhone: winner.phone 
-  });
-
-  setTimeout(() => {
-    startRound(room);
-    broadcastRoom(room.id);
-  }, 5000);
-}
-
 function startRound(room) {
   let deck = [];
   SUITS.forEach(s => RANKS.forEach(r => deck.push({ suit: s, rank: r })));
@@ -140,7 +77,7 @@ function startRound(room) {
   room.lastMoveWasSeen = false;
 
   room.players.forEach(p => {
-    p.chips -= 1; // Boot ₹1
+    p.chips -= 1;
     room.pot += 1;
     p.state = 'blind';
     p.folded = false;
@@ -149,6 +86,31 @@ function startRound(room) {
 
   room.activeIdx = 0;
   resetTimer(room);
+}
+
+function finishGame(room, winner) {
+  if (room.timer) clearInterval(room.timer);
+  winner.chips += room.pot;
+
+  room.players.forEach(p => {
+    if (users[p.phone]) {
+      users[p.phone].chips = p.chips;
+      users[p.phone].gamesPlayed = (users[p.phone].gamesPlayed || 0) + 1;
+      if (p.phone === winner.phone) {
+        users[p.phone].gamesWon = (users[p.phone].gamesWon || 0) + 1;
+      }
+    }
+  });
+
+  io.to(room.id).emit('gameOver', { 
+    message: `🏆 ${winner.name} won ₹${room.pot}!`,
+    winnerPhone: winner.phone 
+  });
+
+  setTimeout(() => {
+    startRound(room);
+    broadcastRoom(room.id);
+  }, 5000);
 }
 
 function sanitizeRoomState(room, phone) {
@@ -201,44 +163,43 @@ function nextTurn(room) {
 }
 
 io.on('connection', (socket) => {
-  // Mobile Login / Register
-  socket.on('authLogin', async ({ phone, pin, name }) => {
-    if (!phone || phone.length < 10 || !pin) {
-      return socket.emit('authError', 'Kripya sahi 10-digit mobile number aur 4-digit PIN dalein!');
+  // 1. Send OTP
+  socket.on('requestOtp', ({ phone }) => {
+    if (!phone || phone.length !== 10) {
+      return socket.emit('authError', 'Kripya sahi 10-digit mobile number dalein!');
+    }
+    const generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
+    pendingOtps[phone] = generatedOtp;
+
+    // Send OTP to client
+    socket.emit('otpSent', { phone, otp: generatedOtp });
+  });
+
+  // 2. Verify OTP & Register/Login
+  socket.on('verifyOtp', ({ phone, otp, name }) => {
+    if (pendingOtps[phone] !== otp && otp !== '1234') { // 1234 demo bypass code
+      return socket.emit('authError', 'Galat OTP! Kripya dobara check karein.');
     }
 
-    let user = await getUser(phone);
-    if (!user) {
-      // Naya Account
-      user = {
+    delete pendingOtps[phone];
+
+    if (!users[phone]) {
+      users[phone] = {
         phone,
         name: name || `Player_${phone.slice(-4)}`,
-        pin,
         chips: 1000,
         gamesPlayed: 0,
         gamesWon: 0
       };
-      await saveUser(user);
-    } else {
-      // Purana Account check PIN
-      if (user.pin !== pin) {
-        return socket.emit('authError', 'Galat PIN! Dubara koshish karein.');
-      }
     }
 
-    socket.emit('authSuccess', {
-      phone: user.phone,
-      name: user.name,
-      chips: user.chips,
-      gamesPlayed: user.gamesPlayed,
-      gamesWon: user.gamesWon
-    });
+    socket.emit('authSuccess', users[phone]);
   });
 
-  // Table Join
-  socket.on('joinOrCreateRoom', async ({ roomId, phone }) => {
-    const user = await getUser(phone);
-    if (!user) return socket.emit('errorMsg', 'Session expire ho gaya, dubara login karein.');
+  // 3. Room Management
+  socket.on('joinOrCreateRoom', ({ roomId, phone }) => {
+    const user = users[phone];
+    if (!user) return socket.emit('errorMsg', 'Session expired, login again!');
 
     let room = rooms[roomId];
     if (!room) {
@@ -255,7 +216,6 @@ io.on('connection', (socket) => {
       rooms[roomId] = room;
     }
 
-    // Reconnect Check
     let p = room.players.find(x => x.phone === phone);
     if (p) {
       p.socketId = socket.id;
@@ -265,7 +225,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    if (room.players.length >= 10) return socket.emit('errorMsg', 'Table Full hai (Max 10)!');
+    if (room.players.length >= 10) return socket.emit('errorMsg', 'Table Full (Max 10 players)!');
 
     room.players.push({
       id: 'p_' + phone,
@@ -286,6 +246,7 @@ io.on('connection', (socket) => {
     broadcastRoom(roomId);
   });
 
+  // 4. In-Game Actions
   socket.on('action', ({ roomId, phone, type, amount }) => {
     const room = rooms[roomId];
     if (!room) return;
@@ -301,9 +262,9 @@ io.on('connection', (socket) => {
     if (type === 'CHAAL') {
       let raise = parseInt(amount);
       if (isNaN(raise) || raise <= room.currentBet) {
-        return socket.emit('errorMsg', `Chaal amount ₹${room.currentBet} se zyada honi chahiye!`);
+        return socket.emit('errorMsg', `Chaal amount ₹${room.currentBet} se zyada hona chahiye!`);
       }
-      if (player.chips < raise) return socket.emit('errorMsg', 'Balance kam hai!');
+      if (player.chips < raise) return socket.emit('errorMsg', 'Chips kam hain!');
 
       player.chips -= raise;
       room.pot += raise;
@@ -312,7 +273,7 @@ io.on('connection', (socket) => {
       nextTurn(room);
     } else if (type === 'BAND') {
       if (player.state !== 'blind') return socket.emit('errorMsg', 'Sirf Blind player BAND kar sakta hai!');
-      if (player.chips < room.currentBet) return socket.emit('errorMsg', 'Balance kam hai!');
+      if (player.chips < room.currentBet) return socket.emit('errorMsg', 'Chips kam hain!');
 
       player.chips -= room.currentBet;
       room.pot += room.currentBet;
@@ -324,7 +285,7 @@ io.on('connection', (socket) => {
         return socket.emit('errorMsg', 'Counter tabhi chalega jab samne wale ne SEEN chala ho!');
       }
       let counterBet = room.currentBet * 3;
-      if (player.chips < counterBet) return socket.emit('errorMsg', 'Balance kam hai!');
+      if (player.chips < counterBet) return socket.emit('errorMsg', 'Chips kam hain!');
 
       player.chips -= counterBet;
       room.pot += counterBet;
@@ -336,8 +297,8 @@ io.on('connection', (socket) => {
       nextTurn(room);
     } else if (type === 'SHOW') {
       let alive = room.players.filter(p => !p.folded);
-      if (alive.length > 2) return socket.emit('errorMsg', 'Show sirf 2 players bache hone par hoga!');
-      
+      if (alive.length > 2) return socket.emit('errorMsg', 'Show sirf last ke 2 players me hoga!');
+
       let caller = player;
       let opp = alive.find(p => p.phone !== caller.phone);
       let winner = decideWinner(caller, opp);

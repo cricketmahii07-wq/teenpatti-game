@@ -79,13 +79,13 @@ function handleTimeout(room) {
     room.players = room.players.filter(p => p.phone !== activePlayer.phone);
   }
 
+  room.lastMoveAnnouncement = `${activePlayer.name} timed out aur Fold ho gaya!`;
   nextTurn(room);
 }
 
 function startRound(room) {
   stopTimer(room);
 
-  // Kam se kam 2 players chahiye
   let eligiblePlayers = room.players.filter(p => p.chips >= 1);
   if (eligiblePlayers.length < 2) {
     room.isRoundActive = false;
@@ -97,6 +97,7 @@ function startRound(room) {
   room.pot = 0;
   room.currentBet = 1;
   room.lastMoveWasSeen = false;
+  room.lastMoveAnnouncement = "Round Shuru Hua! Boot ₹1 Collect hua.";
   room.roundCount = (room.roundCount || 0) + 1;
 
   let deck = [];
@@ -112,7 +113,7 @@ function startRound(room) {
       p.folded = false;
       p.isWaiting = false;
       p.cards = [deck.pop(), deck.pop(), deck.pop()];
-      p.bluff = Math.random() < 0.20; // 20% Bluff chance for bots
+      p.bluff = Math.random() < 0.20;
     } else {
       p.folded = true;
       p.isWaiting = true;
@@ -173,7 +174,6 @@ function finishGame(room, winner, showData = null) {
   });
 
   setTimeout(() => {
-    // Check if bots need chips refill
     room.players.forEach(p => {
       if (p.isBot && p.chips < 50) p.chips += 500;
     });
@@ -191,6 +191,7 @@ function sanitizeRoomState(room, phone) {
     currentBet: room.currentBet,
     activeIdx: room.activeIdx,
     lastMoveWasSeen: room.lastMoveWasSeen,
+    lastMoveAnnouncement: room.lastMoveAnnouncement || "",
     timeLeft: room.timeLeft || 30,
     canShow: canShowNow,
     isRoundActive: room.isRoundActive,
@@ -242,13 +243,13 @@ function nextTurn(room) {
   checkBotTurn(room);
 }
 
-// --- Smart Human-like Bot Engine ---
+// --- Smart Bot with Updated Band / Counter ---
 function checkBotTurn(room) {
   if (!room.isRoundActive) return;
   const p = room.players[room.activeIdx];
   if (!p || !p.isBot || p.folded || p.isWaiting) return;
 
-  const delay = Math.floor(1500 + Math.random() * 1500); // 1.5s to 3s realistic think time
+  const delay = Math.floor(1500 + Math.random() * 1500);
   setTimeout(() => {
     if (!room.isRoundActive || room.players[room.activeIdx]?.phone !== p.phone) return;
     executeBotAction(room, p);
@@ -265,35 +266,39 @@ function executeBotAction(room, bot) {
   let isMedium = score >= 4 && score < 7;
   let isWeak = score < 4 && trio === 0;
 
-  // 1. Blind Play or See
   if (bot.state === 'blind') {
-    // 50% chance to see cards or play blind
     if (Math.random() < 0.5 && !bot.bluff) {
       bot.state = 'seen';
+      room.lastMoveAnnouncement = `${bot.name} ne Cards DEKHE!`;
       broadcastRoom(room.id);
       setTimeout(() => executeBotAction(room, bot), 1000);
       return;
     } else {
-      // Blind Move: Chaal or Band
+      // Band (2x multiplier set for next player)
       if (Math.random() < 0.25) {
-        // BAND 2x
-        bot.chips -= room.currentBet;
-        room.pot += room.currentBet;
-        room.currentBet *= 2;
+        let basePay = room.currentBet;
+        if (bot.chips < basePay) {
+          bot.folded = true;
+          return nextTurn(room);
+        }
+        bot.chips -= basePay;
+        room.pot += basePay;
+        room.currentBet = basePay * 2;
         room.lastMoveWasSeen = false;
+        room.lastMoveAnnouncement = `${bot.name} ne BAND kiya ₹${basePay}! (Agle ke liye bet: ₹${room.currentBet})`;
         return nextTurn(room);
       } else {
         // Blind Chaal
-        bot.chips -= room.currentBet;
-        room.pot += room.currentBet;
+        let basePay = room.currentBet;
+        bot.chips -= basePay;
+        room.pot += basePay;
         room.lastMoveWasSeen = false;
+        room.lastMoveAnnouncement = `${bot.name} ne Blind Chaal chali: ₹${basePay}`;
         return nextTurn(room);
       }
     }
   }
 
-  // 2. Seen Decisions
-  // If Show condition is met
   let canShow = alive.length === 1 && otherPlayer && otherPlayer.state === 'seen';
   if (canShow && (isStrong || (isMedium && room.currentBet > 15))) {
     let winner = decideWinner(bot, otherPlayer);
@@ -301,23 +306,24 @@ function executeBotAction(room, bot) {
       p1: { name: bot.name, cards: bot.cards, score: getUnitScore(bot.cards) },
       p2: { name: otherPlayer.name, cards: otherPlayer.cards, score: getUnitScore(otherPlayer.cards) }
     };
+    room.lastMoveAnnouncement = `${bot.name} ne SHOW mangwaya!`;
     return finishGame(room, winner, showData);
   }
 
-  // Fold decision for weak cards unless bluffing
   if (isWeak && !bot.bluff && room.currentBet >= 5) {
     bot.folded = true;
+    room.lastMoveAnnouncement = `${bot.name} PACK ho gaya!`;
     return nextTurn(room);
   }
 
-  // Aggressive / Raise decision
   let betAmt = room.currentBet;
-  if ((isStrong || bot.bluff) && Math.random() < 0.4) {
+  if ((isStrong || bot.bluff) && Math.random() < 0.35) {
     betAmt += (Math.random() < 0.5 ? 2 : 5);
   }
 
   if (bot.chips < betAmt) {
     bot.folded = true;
+    room.lastMoveAnnouncement = `${bot.name} Chips khatam hone par PACK hua!`;
     return nextTurn(room);
   }
 
@@ -325,6 +331,7 @@ function executeBotAction(room, bot) {
   room.pot += betAmt;
   room.currentBet = betAmt;
   room.lastMoveWasSeen = true;
+  room.lastMoveAnnouncement = `${bot.name} ne Chaal chali: ₹${betAmt}`;
   nextTurn(room);
 }
 
@@ -352,7 +359,6 @@ io.on('connection', (socket) => {
     socket.emit('authSuccess', users[phone]);
   });
 
-  // Regular Multiplayer Room
   socket.on('joinOrCreateRoom', ({ roomId, phone }) => {
     const user = users[phone];
     if (!user) return socket.emit('errorMsg', 'Session expired, login again!');
@@ -365,6 +371,7 @@ io.on('connection', (socket) => {
         currentBet: 1,
         activeIdx: 0,
         lastMoveWasSeen: false,
+        lastMoveAnnouncement: "Lobby me players ka wait chal raha hai...",
         players: [],
         timer: null,
         timeLeft: 30,
@@ -405,7 +412,6 @@ io.on('connection', (socket) => {
 
     socket.join(roomId);
 
-    // Single player check: kam se kam 2 players chahiye start ke liye
     if (!room.isRoundActive && room.players.length >= 2) {
       startRound(room);
     } else {
@@ -413,7 +419,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Bot Room Creation
   socket.on('createBotRoom', ({ phone, botCount }) => {
     const user = users[phone];
     if (!user) return socket.emit('errorMsg', 'Session expired, login again!');
@@ -427,6 +432,7 @@ io.on('connection', (socket) => {
       currentBet: 1,
       activeIdx: 0,
       lastMoveWasSeen: false,
+      lastMoveAnnouncement: "Bot game start ho raha hai...",
       players: [
         {
           id: 'p_' + phone,
@@ -478,8 +484,9 @@ io.on('connection', (socket) => {
   socket.on('requestAddChips', ({ roomId, phone }) => {
     const room = rooms[roomId];
     if (!room || !room.isRoundActive) return;
-    io.to(room.id).emit('playerMessage', `${users[phone]?.name || 'Player'} points add kar raha hai! 120s time diya gaya.`);
+    room.lastMoveAnnouncement = `${users[phone]?.name || 'Player'} points add kar raha hai (+120s)`;
     resetTimer(room, 120);
+    broadcastRoom(roomId);
   });
 
   socket.on('addCustomChips', ({ roomId, phone, amount }) => {
@@ -500,11 +507,11 @@ io.on('connection', (socket) => {
     socket.emit('chipsUpdated', { chips: users[phone].chips });
   });
 
+  // Action Handling with Exact Custom Band / Counter Rules
   socket.on('action', ({ roomId, phone, type, amount }) => {
     const room = rooms[roomId];
     if (!room || !room.isRoundActive) return;
 
-    // Strict Check: Kam se kam 2 players hone chahiye table par
     let eligible = room.players.filter(p => !p.folded && !p.isWaiting);
     if (eligible.length < 2) return socket.emit('errorMsg', 'Dusre player ka wait karein!');
 
@@ -515,47 +522,66 @@ io.on('connection', (socket) => {
 
     if (type === 'SEE') {
       player.state = 'seen';
+      room.lastMoveAnnouncement = `${player.name} ne Cards DEKHE!`;
       broadcastRoom(roomId);
       return;
     }
 
+    let customInput = parseInt(amount) || room.currentBet;
+
     if (type === 'CHAAL') {
-      let raise = parseInt(amount);
-      if (isNaN(raise) || raise < room.currentBet) {
+      if (customInput < room.currentBet) {
         return socket.emit('errorMsg', `Chaal amount kam se kam ₹${room.currentBet} hona chahiye!`);
       }
-      if (player.chips < raise) return socket.emit('errorMsg', 'Chips kam hain!');
+      if (player.chips < customInput) return socket.emit('errorMsg', 'Chips kam hain!');
 
-      player.chips -= raise;
-      room.pot += raise;
-      room.currentBet = raise;
+      player.chips -= customInput;
+      room.pot += customInput;
+      room.currentBet = customInput;
       room.lastMoveWasSeen = (player.state === 'seen');
+      room.lastMoveAnnouncement = `${player.name} ne CHAAL chali: ₹${customInput}`;
       nextTurn(room);
-    } else if (type === 'BAND') {
+    } 
+    else if (type === 'BAND') {
       if (player.state !== 'blind') return socket.emit('errorMsg', 'Sirf Blind player BAND kar sakta hai!');
-      if (player.chips < room.currentBet) return socket.emit('errorMsg', 'Chips kam hain!');
+      if (customInput < room.currentBet) {
+        return socket.emit('errorMsg', `Band amount kam se kam ₹${room.currentBet} hona chahiye!`);
+      }
+      if (player.chips < customInput) return socket.emit('errorMsg', 'Chips kam hain!');
 
-      player.chips -= room.currentBet;
-      room.pot += room.currentBet;
-      room.currentBet *= 2;
+      // Player pays only base amount
+      player.chips -= customInput;
+      room.pot += customInput;
+      // Next player has to pay 2x
+      room.currentBet = customInput * 2;
       room.lastMoveWasSeen = false;
+      room.lastMoveAnnouncement = `⚡ ${player.name} ne BAND kiya ₹${customInput}! (Agle player ko pay karna hoga 2x: ₹${room.currentBet})`;
       nextTurn(room);
-    } else if (type === 'COUNTER') {
+    } 
+    else if (type === 'COUNTER') {
       if (player.state !== 'blind' || !room.lastMoveWasSeen) {
         return socket.emit('errorMsg', 'Counter tabhi chalega jab samne wale ne SEEN chala ho!');
       }
-      let counterBet = room.currentBet * 3;
-      if (player.chips < counterBet) return socket.emit('errorMsg', 'Chips kam hain!');
+      if (customInput < room.currentBet) {
+        return socket.emit('errorMsg', `Counter amount kam se kam ₹${room.currentBet} hona chahiye!`);
+      }
+      if (player.chips < customInput) return socket.emit('errorMsg', 'Chips kam hain!');
 
-      player.chips -= counterBet;
-      room.pot += counterBet;
-      room.currentBet = counterBet;
+      // Player pays only base amount
+      player.chips -= customInput;
+      room.pot += customInput;
+      // Next player has to pay 3x
+      room.currentBet = customInput * 3;
       room.lastMoveWasSeen = false;
+      room.lastMoveAnnouncement = `🔥 ${player.name} ne COUNTER lagaya ₹${customInput}! (Agle player ko pay karna hoga 3x: ₹${room.currentBet})`;
       nextTurn(room);
-    } else if (type === 'PACK') {
+    } 
+    else if (type === 'PACK') {
       player.folded = true;
+      room.lastMoveAnnouncement = `${player.name} PACK / FOLD ho gaya.`;
       nextTurn(room);
-    } else if (type === 'SHOW') {
+    } 
+    else if (type === 'SHOW') {
       let alive = room.players.filter(p => !p.folded && !p.isWaiting);
       if (alive.length > 2) return socket.emit('errorMsg', 'Show sirf 2 players bache hone par hoga!');
       if (alive.some(p => p.state === 'blind')) {
@@ -571,6 +597,7 @@ io.on('connection', (socket) => {
         p2: { name: opp.name, cards: opp.cards, score: getUnitScore(opp.cards) }
       };
 
+      room.lastMoveAnnouncement = `🏆 ${caller.name} ne SHOW mangwaya!`;
       finishGame(room, winner, showData);
     }
   });
@@ -581,7 +608,6 @@ io.on('connection', (socket) => {
       const p = room.players.find(x => x.socketId === socket.id);
       if (p) {
         p.isOnline = false;
-        // Agar round nahi chal raha aur akele the toh room delete
         if (!room.isRoundActive && room.players.length <= 1) {
           delete rooms[rId];
         } else {

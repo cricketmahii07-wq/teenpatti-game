@@ -12,8 +12,8 @@ app.use(express.json());
 
 const users = {};
 const pendingOtps = {};
-
 const rooms = {};
+
 const SUITS = ['♠', '♥', '♦', '♣'];
 const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
@@ -45,51 +45,130 @@ function decideWinner(p1, p2) {
   return p2;
 }
 
-function resetTimer(room) {
-  if (room.timer) clearInterval(room.timer);
-  room.timeLeft = 30;
+function stopTimer(room) {
+  if (room.timer) {
+    clearInterval(room.timer);
+    room.timer = null;
+  }
+}
+
+function resetTimer(room, duration = 30) {
+  stopTimer(room);
+  room.timeLeft = duration;
 
   room.timer = setInterval(() => {
     room.timeLeft--;
     io.to(room.id).emit('timerUpdate', { timeLeft: room.timeLeft });
 
     if (room.timeLeft <= 0) {
-      clearInterval(room.timer);
-      const activePlayer = room.players[room.activeIdx];
-      if (activePlayer && !activePlayer.folded) {
-        activePlayer.folded = true;
-        io.to(room.id).emit('playerMessage', `${activePlayer.name} timed out aur Fold ho gaya!`);
-        nextTurn(room);
-      }
+      stopTimer(room);
+      handleTimeout(room);
     }
   }, 1000);
 }
 
+function handleTimeout(room) {
+  const activePlayer = room.players[room.activeIdx];
+  if (!activePlayer || activePlayer.folded || activePlayer.isWaiting) return;
+
+  activePlayer.folded = true;
+  activePlayer.missedTurns = (activePlayer.missedTurns || 0) + 1;
+
+  // 1. Kick after 2 consecutive timeouts
+  if (activePlayer.missedTurns >= 2) {
+    io.to(activePlayer.socketId).emit('kicked', 'Aapko 2 lagatar turns miss karne ki wajah se table se hata diya gaya hai.');
+    room.players = room.players.filter(p => p.phone !== activePlayer.phone);
+    io.to(room.id).emit('playerMessage', `${activePlayer.name} inactive hone ke karan table se kick ho gaya.`);
+  } else {
+    io.to(room.id).emit('playerMessage', `${activePlayer.name} ne turn miss kiya (Auto Fold 1/2)!`);
+  }
+
+  nextTurn(room);
+}
+
 function startRound(room) {
+  stopTimer(room);
+
+  // Active players list
+  let eligiblePlayers = room.players.filter(p => p.chips >= 1);
+  if (eligiblePlayers.length < 2) {
+    room.isRoundActive = false;
+    io.to(room.id).emit('playerMessage', 'Kam se kam 2 players chahiye naye round ke liye.');
+    broadcastRoom(room.id);
+    return;
+  }
+
+  room.isRoundActive = true;
+  room.pot = 0;
+  room.currentBet = 1;
+  room.lastMoveWasSeen = false;
+  room.roundCount = (room.roundCount || 0) + 1;
+
   let deck = [];
   SUITS.forEach(s => RANKS.forEach(r => deck.push({ suit: s, rank: r })));
   deck.sort(() => Math.random() - 0.5);
 
-  room.pot = 0;
-  room.currentBet = 1;
-  room.lastMoveWasSeen = false;
-
   room.players.forEach(p => {
-    p.chips -= 1;
-    room.pot += 1;
-    p.state = 'blind';
-    p.folded = false;
-    p.cards = [deck.pop(), deck.pop(), deck.pop()];
+    p.missedTurns = 0;
+    if (p.chips >= 1) {
+      p.chips -= 1; // Boot
+      room.pot += 1;
+      p.state = 'blind';
+      p.folded = false;
+      p.isWaiting = false; // 2. Mid-round waiting player ab active
+      p.cards = [deck.pop(), deck.pop(), deck.pop()];
+    } else {
+      p.folded = true;
+      p.isWaiting = true;
+    }
   });
 
-  room.activeIdx = 0;
-  resetTimer(room);
+  // 5. First turn goes to Winner's Right Hand side player
+  let startIdx = 0;
+  if (room.lastWinnerPhone) {
+    let winIdx = room.players.findIndex(p => p.phone === room.lastWinnerPhone);
+    if (winIdx !== -1) {
+      // Right hand side in circular arrangement (next index)
+      startIdx = (winIdx + 1) % room.players.length;
+    }
+  }
+
+  room.activeIdx = startIdx;
+  while (room.players[room.activeIdx].folded || room.players[room.activeIdx].isWaiting) {
+    room.activeIdx = (room.activeIdx + 1) % room.players.length;
+  }
+
+  // 4. Round Start Announcement
+  io.to(room.id).emit('roundStarted', { roundNumber: room.roundCount, pot: room.pot, currentBet: room.currentBet });
+  resetTimer(room, 30);
+  broadcastRoom(room.id);
 }
 
-function finishGame(room, winner) {
-  if (room.timer) clearInterval(room.timer);
+function finishGame(room, winner, showData = null) {
+  stopTimer(room);
   winner.chips += room.pot;
+  room.lastWinnerPhone = winner.phone;
+  room.isRoundActive = false;
 
+  // 10. Audit History
+  if (!room.history) room.history = [];
+  room.history.unshift({
+    round: room.roundCount || 1,
+    winner: winner.name,
+    pot: room.pot,
+    time: new Date().toLocaleTimeString(),
+    players: room.players.map(p => ({
+      name: p.name,
+      phone: p.phone,
+      chips: p.chips,
+      addedPoints: p.addedPointsThisRound || 0
+    }))
+  });
+
+  // Reset added points
+  room.players.forEach(p => { p.addedPointsThisRound = 0; });
+
+  // Update Database user records
   room.players.forEach(p => {
     if (users[p.phone]) {
       users[p.phone].chips = p.chips;
@@ -100,20 +179,20 @@ function finishGame(room, winner) {
     }
   });
 
-  io.to(room.id).emit('gameOver', { 
-    message: `🏆 ${winner.name} won ₹${room.pot}!`,
-    winnerPhone: winner.phone 
+  // 3. Enhanced Winner Announcement
+  io.to(room.id).emit('enhancedWinner', {
+    winnerName: winner.name,
+    pot: room.pot,
+    showData: showData
   });
 
   setTimeout(() => {
     startRound(room);
-    broadcastRoom(room.id);
-  }, 5000);
+  }, 6000);
 }
 
 function sanitizeRoomState(room, phone) {
-  let alive = room.players.filter(p => !p.folded);
-  // Dono bache hue players SEEN hain ya nahi
+  let alive = room.players.filter(p => !p.folded && !p.isWaiting);
   let canShowNow = alive.length === 2 && alive.every(p => p.state === 'seen');
 
   return {
@@ -124,6 +203,8 @@ function sanitizeRoomState(room, phone) {
     lastMoveWasSeen: room.lastMoveWasSeen,
     timeLeft: room.timeLeft || 30,
     canShow: canShowNow,
+    isRoundActive: room.isRoundActive,
+    history: room.history ? room.history.slice(0, 5) : [],
     players: room.players.map((p) => ({
       id: p.id,
       phone: p.phone,
@@ -131,6 +212,7 @@ function sanitizeRoomState(room, phone) {
       chips: p.chips,
       state: p.state,
       folded: p.folded,
+      isWaiting: p.isWaiting,
       isOnline: p.isOnline,
       isYou: p.phone === phone,
       cards: (p.phone === phone && p.state === 'seen') ? p.cards : null,
@@ -150,7 +232,7 @@ function broadcastRoom(roomId) {
 }
 
 function nextTurn(room) {
-  let alive = room.players.filter(p => !p.folded);
+  let alive = room.players.filter(p => !p.folded && !p.isWaiting);
   if (alive.length <= 1) {
     let winner = alive[0] || room.players[0];
     finishGame(room, winner);
@@ -159,9 +241,9 @@ function nextTurn(room) {
 
   do {
     room.activeIdx = (room.activeIdx + 1) % room.players.length;
-  } while (room.players[room.activeIdx].folded);
+  } while (room.players[room.activeIdx].folded || room.players[room.activeIdx].isWaiting);
 
-  resetTimer(room);
+  resetTimer(room, 30);
   broadcastRoom(room.id);
 }
 
@@ -183,7 +265,6 @@ io.on('connection', (socket) => {
     delete pendingOtps[phone];
 
     if (!users[phone]) {
-      // 1. Initial points set to 500
       users[phone] = {
         phone,
         name: name || `Player_${phone.slice(-4)}`,
@@ -210,7 +291,10 @@ io.on('connection', (socket) => {
         lastMoveWasSeen: false,
         players: [],
         timer: null,
-        timeLeft: 30
+        timeLeft: 30,
+        isRoundActive: false,
+        roundCount: 0,
+        history: []
       };
       rooms[roomId] = room;
     }
@@ -226,6 +310,9 @@ io.on('connection', (socket) => {
 
     if (room.players.length >= 10) return socket.emit('errorMsg', 'Table Full (Max 10 players)!');
 
+    // 2. Mid-round joiner will wait for next round
+    const isWaiting = room.isRoundActive;
+
     room.players.push({
       id: 'p_' + phone,
       phone: user.phone,
@@ -234,15 +321,48 @@ io.on('connection', (socket) => {
       chips: user.chips,
       state: 'blind',
       cards: [],
-      folded: false,
-      isOnline: true
+      folded: isWaiting,
+      isWaiting: isWaiting,
+      isOnline: true,
+      missedTurns: 0,
+      addedPointsThisRound: 0
     });
 
     socket.join(roomId);
-    if (room.players.length === 2 && room.pot === 0) {
+
+    if (!room.isRoundActive && room.players.length >= 2) {
       startRound(room);
+    } else {
+      broadcastRoom(roomId);
     }
-    broadcastRoom(roomId);
+  });
+
+  // 6. Custom Points Add (+120s timer freeze)
+  socket.on('requestAddChips', ({ roomId, phone }) => {
+    const room = rooms[roomId];
+    if (!room || !room.isRoundActive) return;
+    io.to(room.id).emit('playerMessage', `${users[phone]?.name || 'Player'} points add kar raha hai! 120s time diya gaya.`);
+    resetTimer(room, 120);
+  });
+
+  socket.on('addCustomChips', ({ roomId, phone, amount }) => {
+    const room = rooms[roomId];
+    let amt = parseInt(amount);
+    if (isNaN(amt) || amt <= 0) return socket.emit('errorMsg', 'Sahi amount dalein!');
+
+    if (users[phone]) {
+      users[phone].chips += amt;
+    }
+
+    if (room) {
+      let p = room.players.find(x => x.phone === phone);
+      if (p) {
+        p.chips += amt;
+        p.addedPointsThisRound = (p.addedPointsThisRound || 0) + amt;
+      }
+      broadcastRoom(roomId);
+    }
+    socket.emit('chipsUpdated', { chips: users[phone].chips });
   });
 
   socket.on('action', ({ roomId, phone, type, amount }) => {
@@ -251,22 +371,25 @@ io.on('connection', (socket) => {
     const player = room.players[room.activeIdx];
     if (!player || player.phone !== phone) return socket.emit('errorMsg', 'Aapki turn nahi hai!');
 
+    player.missedTurns = 0; // Turn played, reset inactive count
+
     if (type === 'SEE') {
       player.state = 'seen';
       broadcastRoom(roomId);
       return;
     }
 
+    // 9. Bet logic: Matching bet (no auto +1)
     if (type === 'CHAAL') {
       let raise = parseInt(amount);
-      if (isNaN(raise) || raise <= room.currentBet) {
-        return socket.emit('errorMsg', `Chaal amount ₹${room.currentBet} se zyada hona chahiye!`);
+      if (isNaN(raise) || raise < room.currentBet) {
+        return socket.emit('errorMsg', `Chaal amount kam se kam ₹${room.currentBet} hona chahiye!`);
       }
       if (player.chips < raise) return socket.emit('errorMsg', 'Chips kam hain!');
 
       player.chips -= raise;
       room.pot += raise;
-      room.currentBet = raise;
+      room.currentBet = raise; // Matches current or increases if manually raised
       room.lastMoveWasSeen = (player.state === 'seen');
       nextTurn(room);
     } else if (type === 'BAND') {
@@ -294,10 +417,8 @@ io.on('connection', (socket) => {
       player.folded = true;
       nextTurn(room);
     } else if (type === 'SHOW') {
-      let alive = room.players.filter(p => !p.folded);
+      let alive = room.players.filter(p => !p.folded && !p.isWaiting);
       if (alive.length > 2) return socket.emit('errorMsg', 'Show sirf last ke 2 players me hoga!');
-
-      // 2. Rule: Dono ka SEEN hona zaroori hai
       if (alive.some(p => p.state === 'blind')) {
         return socket.emit('errorMsg', 'Show tabhi ho sakta hai jab dono players Seen ho chuke hon!');
       }
@@ -306,14 +427,12 @@ io.on('connection', (socket) => {
       let opp = alive.find(p => p.phone !== caller.phone);
       let winner = decideWinner(caller, opp);
 
-      io.to(roomId).emit('showResult', {
-        winnerName: winner.name,
-        pot: room.pot,
+      let showData = {
         p1: { name: caller.name, cards: caller.cards, score: getUnitScore(caller.cards) },
-        p2: { name: opp.name, cards: opp.cards, score: getUnitScore(opp.cards) },
-      });
+        p2: { name: opp.name, cards: opp.cards, score: getUnitScore(opp.cards) }
+      };
 
-      finishGame(room, winner);
+      finishGame(room, winner, showData);
     }
   });
 
@@ -332,3 +451,4 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    

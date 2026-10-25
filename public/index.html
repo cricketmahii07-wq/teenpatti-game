@@ -2,29 +2,57 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>VIP Teen Patti Club</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>VIP Teen Patti Pro</title>
   <script src="/socket.io/socket.io.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: #030804; color: #fff; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background: #020704; color: #fff; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
     /* Modals */
-    .overlay { position: fixed; inset: 0; background: rgba(3, 8, 4, 0.96); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; }
-    .card-modal { background: #07170c; border: 2px solid #ffd700; border-radius: 16px; padding: 20px; width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; align-items: center; box-shadow: 0 0 25px rgba(255, 215, 0, 0.2); }
+    .overlay { position: fixed; inset: 0; background: rgba(2, 6, 3, 0.96); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; }
+    .card-modal { background: #06170d; border: 2px solid #ffd700; border-radius: 16px; padding: 20px; width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; align-items: center; box-shadow: 0 0 25px rgba(255, 215, 0, 0.25); }
     input { padding: 12px; border-radius: 8px; border: 1px solid #1e5230; background: #030804; color: #fff; width: 100%; text-align: center; font-size: 16px; font-weight: bold; }
     input:focus { border-color: #ffd700; outline: none; }
     .action-btn { padding: 12px; border: none; border-radius: 8px; background: linear-gradient(180deg, #ffd700, #b8860b); color: #000; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; box-shadow: 0 3px 6px rgba(0,0,0,0.4); }
 
-    /* Top Bar */
-    .top { padding: 8px 14px; background: #020503; display: flex; justify-content: space-between; align-items: center; z-index: 10; border-bottom: 2px solid #143d22; }
-    .profile-badge { display: flex; align-items: center; gap: 8px; background: #092112; border: 1px solid #ffd700; padding: 4px 10px; border-radius: 20px; font-size: 12px; }
+    /* Top Navigation */
+    .top { padding: 8px 12px; background: #020503; display: flex; justify-content: space-between; align-items: center; z-index: 10; border-bottom: 2px solid #143d22; }
+    .profile-badge { display: flex; align-items: center; gap: 6px; background: #092112; border: 1px solid #ffd700; padding: 4px 10px; border-radius: 20px; font-size: 12px; }
+    .btn-add-chips { background: #ffd700; color: #000; font-weight: bold; border: none; border-radius: 12px; padding: 2px 8px; font-size: 10px; cursor: pointer; }
     .timer-badge { background: #d32f2f; color: #fff; padding: 3px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; }
 
-    /* 3D Casino Table */
-    .table-box { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; margin-bottom: 210px; }
+    /* Round Start Banner Notification (Rule 4) */
+    #roundStartBanner {
+      position: fixed; top: 20%; left: 50%; transform: translate(-50%, -50%);
+      background: linear-gradient(90deg, #b8860b, #ffd700, #b8860b);
+      color: #000; font-weight: 900; font-size: 16px; padding: 12px 28px;
+      border-radius: 30px; box-shadow: 0 0 25px #ffd700; z-index: 90;
+      display: none; animation: popIn 0.3s ease-out;
+    }
+    @keyframes popIn {
+      0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+
+    /* Enhanced Winner Announcement Modal (Rule 3) */
+    #winnerOverlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 95;
+      display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    }
+    .winner-card {
+      background: radial-gradient(circle, #1a4d26, #061c0e); border: 3px solid #ffd700;
+      border-radius: 20px; padding: 24px; text-align: center; width: 85%; max-width: 340px;
+      box-shadow: 0 0 35px rgba(255, 215, 0, 0.5); animation: popIn 0.4s ease;
+    }
+    .winner-trophy { font-size: 40px; }
+    .winner-title { font-size: 22px; font-weight: bold; color: #ffd700; margin: 4px 0; }
+    .winner-amount { font-size: 26px; font-weight: 900; color: #00e676; margin-bottom: 8px; }
+
+    /* 3D Casino Table (Rule 8) */
+    .table-box { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; margin-bottom: 235px; }
     .oval-table { 
-      width: 95%; max-width: 480px; height: 390px; 
+      width: 95%; max-width: 480px; height: 380px; 
       background: radial-gradient(ellipse at center, #1b6336 0%, #0c3319 75%, #051c0d 100%); 
       border: 14px solid #28150a; border-radius: 140px; position: relative; 
       box-shadow: inset 0 0 40px rgba(0,0,0,0.9), 0 0 30px rgba(0,0,0,0.8); 
@@ -33,44 +61,45 @@
 
     .pot-center { 
       position: absolute; top: 44%; left: 50%; transform: translate(-50%, -50%); 
-      background: rgba(0,0,0,0.85); border: 2px solid #ffd700; padding: 8px 20px; 
+      background: rgba(0,0,0,0.88); border: 2px solid #ffd700; padding: 8px 20px; 
       border-radius: 30px; text-align: center; z-index: 5; box-shadow: 0 0 15px rgba(255,215,0,0.4); 
     }
 
-    /* Opponents Seats */
+    /* Opponent Seats */
     .seat { position: absolute; width: 85px; text-align: center; transition: all 0.2s; }
     .seat.active .p-box { border-color: #ffd700; box-shadow: 0 0 16px #ffd700; transform: scale(1.05); }
+    .seat.waiting .p-box { opacity: 0.5; border-color: #777; }
     .p-box { background: rgba(0,0,0,0.8); border: 2px solid #333; border-radius: 10px; padding: 4px; font-size: 11px; }
     .mini-cards { display: flex; justify-content: center; gap: 2px; margin-top: 4px; }
     .mini-card { width: 22px; height: 32px; background: #fff; color: #000; border-radius: 3px; font-weight: bold; font-size: 10px; display: flex; align-items: center; justify-content: center; }
     .mini-card.back { background: repeating-linear-gradient(45deg, #1565c0, #1565c0 3px, #0d47a1 3px, #0d47a1 6px); color: #fff; }
     .mini-card.red { color: #d32f2f; }
 
-    /* Dedicated Big Cards for Player (Raised slightly higher) */
+    /* Big Player Hand */
     .my-hand-container {
-      position: fixed; bottom: 125px; left: 0; right: 0;
+      position: fixed; bottom: 135px; left: 0; right: 0;
       display: flex; justify-content: center; align-items: center; gap: 12px;
       z-index: 40; pointer-events: none;
     }
     .big-card {
-      width: 62px; height: 92px; background: #fff; border-radius: 8px; color: #111;
+      width: 64px; height: 95px; background: #fff; border-radius: 10px; color: #111;
       display: flex; flex-direction: column; justify-content: space-between; padding: 6px;
-      font-weight: bold; font-size: 19px; box-shadow: 0 6px 16px rgba(0,0,0,0.9);
-      user-select: none; border: 1px solid #ccc; pointer-events: auto;
+      font-weight: bold; font-size: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.9);
+      user-select: none; border: 2px solid #ddd; pointer-events: auto;
     }
     .big-card.red { color: #d32f2f; }
     .big-card.card-back {
       background: repeating-linear-gradient(45deg, #b71c1c, #b71c1c 5px, #880e4f 5px, #880e4f 10px);
       border: 2px solid #fff; display: flex; align-items: center; justify-content: center;
     }
-    .big-card.card-back::after { content: '♠'; color: rgba(255,255,255,0.7); font-size: 28px; }
+    .big-card.card-back::after { content: '♠'; color: rgba(255,255,255,0.7); font-size: 32px; }
 
-    /* 3. Action Controls Shifted Upward (bottom: 24px) */
+    /* Action Controls Raised (Rule 8: Safe from Android navigation buttons) */
     .bottom-bar { 
-      position: fixed; bottom: 24px; left: 10px; right: 10px; 
-      background: rgba(4, 14, 7, 0.98); padding: 10px 8px; border-radius: 14px;
+      position: fixed; bottom: 28px; left: 10px; right: 10px; 
+      background: rgba(4, 14, 7, 0.98); padding: 10px 8px; border-radius: 16px;
       border: 1.5px solid #23653b; display: flex; flex-direction: column; gap: 8px; z-index: 50; 
-      box-shadow: 0 -4px 18px rgba(0,0,0,0.9);
+      box-shadow: 0 -6px 20px rgba(0,0,0,0.9);
     }
     .custom-chaal-row { display: flex; gap: 6px; align-items: center; justify-content: center; }
     .custom-chaal-row input { width: 95px; padding: 7px; font-size: 14px; text-align: center; }
@@ -89,7 +118,7 @@
 </head>
 <body>
 
-  <!-- STEP 1: Phone Number -->
+  <!-- STEP 1: Mobile Login -->
   <div id="phoneOverlay" class="overlay">
     <div class="card-modal">
       <h2 style="color:#ffd700;">♠ REGISTER / LOGIN</h2>
@@ -104,14 +133,14 @@
   <div id="otpOverlay" class="overlay" style="display:none;">
     <div class="card-modal">
       <h2 style="color:#ffd700;">ENTER OTP</h2>
-      <p style="font-size:12px; color:#aaa; text-align:center;">Mobile par bheja gaya 4-digit code dalein:</p>
+      <p style="font-size:12px; color:#aaa; text-align:center;">Code dalein (Demo: 1234):</p>
       <input type="number" id="otpInput" placeholder="4-Digit OTP" maxlength="4">
       <button class="action-btn" onclick="verifyOtpCode()">VERIFY & PLAY</button>
       <button class="action-btn" style="background:#444; color:#fff;" onclick="backToPhone()">CHANGE NUMBER</button>
     </div>
   </div>
 
-  <!-- Table Join Lobby -->
+  <!-- Lobby & History Modal -->
   <div id="lobbyOverlay" class="overlay" style="display:none;">
     <div class="card-modal">
       <h2 style="color:#ffd700;">GAME LOBBY</h2>
@@ -121,11 +150,48 @@
     </div>
   </div>
 
+  <!-- Add Chips Modal (Rule 6: 120s Freeze) -->
+  <div id="addChipsModal" class="overlay" style="display:none;">
+    <div class="card-modal">
+      <h2 style="color:#ffd700;">💰 ADD POINTS</h2>
+      <p style="font-size:12px; color:#ccc; text-align:center;">Round timer 120s ke liye freeze ho gaya hai.</p>
+      <input type="number" id="chipsToAddInput" placeholder="Kitne points add karne hain?">
+      <button class="action-btn" onclick="confirmAddChips()">ADD POINTS</button>
+      <button class="action-btn" style="background:#444; color:#fff;" onclick="closeAddChipsModal()">CANCEL</button>
+    </div>
+  </div>
+
+  <!-- Round History Modal (Rule 10) -->
+  <div id="historyModal" class="overlay" style="display:none;">
+    <div class="card-modal" style="max-height: 80vh; overflow-y: auto;">
+      <h3 style="color:#ffd700;">📜 ROUND HISTORY</h3>
+      <div id="historyContent" style="font-size:11px; text-align:left; width:100%;"></div>
+      <button class="action-btn" style="background:#444; color:#fff; padding:6px; margin-top:8px;" onclick="document.getElementById('historyModal').style.display='none'">CLOSE</button>
+    </div>
+  </div>
+
+  <!-- Round Start Popup Banner (Rule 4) -->
+  <div id="roundStartBanner">🔔 ROUND STARTED! Boot ₹1</div>
+
+  <!-- Enhanced Winner Modal (Rule 3) -->
+  <div id="winnerOverlay">
+    <div class="winner-card">
+      <div class="winner-trophy">🏆</div>
+      <div class="winner-title" id="winCardName">Winner Name</div>
+      <div class="winner-amount" id="winCardAmount">₹0</div>
+      <div id="winCardDetails" style="font-size:12px; color:#ddd; margin-top:6px;"></div>
+    </div>
+  </div>
+
   <!-- Top Bar -->
   <div class="top">
-    <div>Room: <b id="displayRoomId" style="color:#ffd700;">-</b></div>
+    <div>
+      Room: <b id="displayRoomId" style="color:#ffd700;">-</b>
+      <button onclick="openHistory()" style="background:none; border:none; color:#ffd700; cursor:pointer; font-size:12px; margin-left:6px;">📜 Logs</button>
+    </div>
     <div class="profile-badge">
       <span id="profileName">User</span> | <b>₹<span id="myWalletChips">500</span></b>
+      <button class="btn-add-chips" onclick="openAddChips()">+ ADD</button>
     </div>
     <div id="timerDisplay" class="timer-badge">⏳ 30s</div>
   </div>
@@ -135,15 +201,15 @@
     <div class="oval-table" id="tableSeats">
       <div class="pot-center">
         <div style="color:#ffd700; font-size:18px; font-weight:bold;">₹<span id="potAmount">0</span></div>
-        <div style="font-size:10px; color:#aaa;">Bet: ₹<span id="betAmount">1</span></div>
+        <div style="font-size:10px; color:#aaa;">Chaal: ₹<span id="betAmount">1</span></div>
       </div>
     </div>
   </div>
 
-  <!-- Big Player Cards -->
+  <!-- Big Cards Hand -->
   <div class="my-hand-container" id="myBigCards"></div>
 
-  <!-- Upward Positioned Action Controls -->
+  <!-- Bottom Panel -->
   <div class="bottom-bar">
     <div class="custom-chaal-row">
       <button class="chip-btn" onclick="adjustChaal(1)">+1</button>
@@ -167,7 +233,29 @@
     let currentRoomId = null;
     let currentUser = null;
     let canShowGlobally = false;
+    let latestHistory = [];
 
+    // --- 7. Sound Effects using Web Audio API & Vibration ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep(freq = 600, duration = 0.1) {
+      try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.value = freq;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.stop(audioCtx.currentTime + duration);
+      } catch(e) {}
+    }
+
+    function triggerVibrate(pattern = [50]) {
+      if (navigator.vibrate) navigator.vibrate(pattern);
+    }
+
+    // Auto-login
     window.addEventListener('load', () => {
       let savedPhone = localStorage.getItem('tp_phone');
       let savedName = localStorage.getItem('tp_name');
@@ -180,6 +268,7 @@
 
     function sendOtpRequest() {
       const phone = document.getElementById('userPhone').value.trim();
+      const name = document.getElementById('userName').value.trim();
       if (phone.length !== 10) return alert('10-digit phone number dalein!');
       socket.emit('requestOtp', { phone });
     }
@@ -237,38 +326,85 @@
       socket.emit('joinOrCreateRoom', { roomId, phone: currentUser.phone });
     }
 
+    // --- 4. Round Start Banner ---
+    socket.on('roundStarted', ({ roundNumber, pot, currentBet }) => {
+      playBeep(880, 0.25);
+      triggerVibrate([80, 40, 80]);
+      const banner = document.getElementById('roundStartBanner');
+      banner.innerText = `🔔 ROUND #${roundNumber} STARTED! Boot ₹1`;
+      banner.style.display = 'block';
+      setTimeout(() => { banner.style.display = 'none'; }, 2500);
+    });
+
+    // --- 3. Enhanced Winner Announcement ---
+    socket.on('enhancedWinner', ({ winnerName, pot, showData }) => {
+      playBeep(523, 0.15);
+      setTimeout(() => playBeep(659, 0.2), 150);
+      setTimeout(() => playBeep(784, 0.35), 350);
+      triggerVibrate([100, 50, 100, 50, 200]);
+
+      document.getElementById('winCardName').innerText = winnerName;
+      document.getElementById('winCardAmount').innerText = `+₹${pot}`;
+
+      let detailsHtml = '';
+      if (showData) {
+        detailsHtml = `
+          <div style="background:rgba(0,0,0,0.4); padding:6px; border-radius:8px; margin-top:6px;">
+            <b>${showData.p1.name}</b>: ${showData.p1.cards.map(c=>c.rank+c.suit).join(' ')} (Score: ${showData.p1.score})<br>
+            <b>${showData.p2.name}</b>: ${showData.p2.cards.map(c=>c.rank+c.suit).join(' ')} (Score: ${showData.p2.score})
+          </div>
+        `;
+      }
+      document.getElementById('winCardDetails').innerHTML = detailsHtml;
+
+      const overlay = document.getElementById('winnerOverlay');
+      overlay.style.display = 'flex';
+      setTimeout(() => { overlay.style.display = 'none'; }, 5000);
+    });
+
+    // 1. Kick notification
+    socket.on('kicked', (msg) => {
+      alert(msg);
+      location.reload();
+    });
+
     socket.on('errorMsg', (msg) => alert(msg));
     socket.on('playerMessage', (msg) => alert(msg));
     socket.on('timerUpdate', ({ timeLeft }) => {
       document.getElementById('timerDisplay').innerText = `⏳ ${timeLeft}s`;
+      if (timeLeft <= 5) playBeep(300, 0.05);
     });
 
     socket.on('gameState', (state) => {
       currentRoomId = state.roomId;
       canShowGlobally = state.canShow;
+      latestHistory = state.history || [];
       document.getElementById('displayRoomId').innerText = state.roomId;
       document.getElementById('lobbyOverlay').style.display = 'none';
       document.getElementById('potAmount').innerText = state.pot;
       document.getElementById('betAmount').innerText = state.currentBet;
 
+      // 9. Matching Bet: Default customChaalInput strictly equals currentBet
       let chaalInput = document.getElementById('customChaalInput');
-      if (!chaalInput.value || parseInt(chaalInput.value) <= state.currentBet) {
-        chaalInput.value = state.currentBet + 1;
+      if (!chaalInput.value || parseInt(chaalInput.value) < state.currentBet) {
+        chaalInput.value = state.currentBet;
       }
 
       let activeP = state.players[state.activeIdx];
       let you = state.players.find(p => p.isYou);
       if (you) document.getElementById('myWalletChips').innerText = you.chips;
 
-      let isYourTurn = you && activeP && activeP.id === you.id;
+      let isYourTurn = you && activeP && activeP.id === you.id && !you.isWaiting;
+
+      if (isYourTurn) {
+        triggerVibrate([60]);
+      }
 
       document.getElementById('btnSee').disabled = !(isYourTurn && you.state === 'blind');
       document.getElementById('btnBand').disabled = !(isYourTurn && you.state === 'blind');
       document.getElementById('btnCounter').disabled = !(isYourTurn && you.state === 'blind' && state.lastMoveWasSeen);
       document.getElementById('btnChaal').disabled = !isYourTurn;
       document.getElementById('btnPack').disabled = !isYourTurn;
-      
-      // Show tabhi active hoga jab aapki turn ho aur dono player SEEN hon
       document.getElementById('btnShow').disabled = !(isYourTurn && state.canShow);
 
       renderTable(state.players, state.activeIdx);
@@ -284,8 +420,10 @@
 
     function renderMyBigCards(you) {
       const container = document.getElementById('myBigCards');
-      if (!you || you.folded) {
-        container.innerHTML = '';
+      if (!you || you.folded || you.isWaiting) {
+        container.innerHTML = you?.isWaiting 
+          ? `<div style="background:rgba(0,0,0,0.7); border:1px solid #ffd700; padding:6px 14px; border-radius:15px; font-weight:bold; color:#ffd700;">⏳ Agle Round ke liye Wait karein</div>` 
+          : '';
         return;
       }
 
@@ -319,22 +457,22 @@
         const angle = (i / total) * Math.PI + Math.PI;
         const rx = 145, ry = 135;
         const x = 185 + rx * Math.cos(angle);
-        const y = 150 + ry * Math.sin(angle);
+        const y = 145 + ry * Math.sin(angle);
 
         let cardHtml = p.cards 
           ? p.cards.map(c => `<div class="mini-card ${c.suit==='♥'||c.suit==='♦'?'red':''}">${c.rank}${c.suit}</div>`).join('')
           : `<div class="mini-card back">🂠</div><div class="mini-card back">🂠</div><div class="mini-card back">🂠</div>`;
 
         const seatDiv = document.createElement('div');
-        seatDiv.className = `seat ${players[activeIdx]?.phone === p.phone ? 'active' : ''}`;
+        seatDiv.className = `seat ${players[activeIdx]?.phone === p.phone ? 'active' : ''} ${p.isWaiting ? 'waiting' : ''}`;
         seatDiv.style.left = `${x}px`;
         seatDiv.style.top = `${y}px`;
         seatDiv.innerHTML = `
           <div class="p-box">
             <b>${p.name}</b><br>
-            ₹${p.chips} | <span style="color:#ffd700;">${p.folded ? 'FOLD' : p.state.toUpperCase()}</span>
+            ₹${p.chips} | <span style="color:#ffd700;">${p.isWaiting ? 'WAITING' : (p.folded ? 'FOLD' : p.state.toUpperCase())}</span>
           </div>
-          <div class="mini-cards">${cardHtml}</div>
+          <div class="mini-cards">${p.isWaiting ? '' : cardHtml}</div>
         `;
         container.appendChild(seatDiv);
       });
@@ -350,13 +488,53 @@
     }
 
     function sendAction(type, amount) {
+      playBeep(450, 0.08);
+      triggerVibrate([40]);
       socket.emit('action', { roomId: currentRoomId, phone: currentUser.phone, type, amount });
     }
 
-    socket.on('gameOver', ({ message }) => alert(message));
-    socket.on('showResult', (res) => {
-      alert(`🏆 Winner: ${res.winnerName} won ₹${res.pot}!\n\n${res.p1.name}: ${res.p1.cards.map(c=>c.rank+c.suit).join(' ')} (Pt: ${res.p1.score})\n${res.p2.name}: ${res.p2.cards.map(c=>c.rank+c.suit).join(' ')} (Pt: ${res.p2.score})`);
+    // --- 6. Custom Points Re-fill UI ---
+    function openAddChips() {
+      socket.emit('requestAddChips', { roomId: currentRoomId, phone: currentUser.phone });
+      document.getElementById('addChipsModal').style.display = 'flex';
+    }
+
+    function closeAddChipsModal() {
+      document.getElementById('addChipsModal').style.display = 'none';
+    }
+
+    function confirmAddChips() {
+      let val = document.getElementById('chipsToAddInput').value.trim();
+      let amt = parseInt(val);
+      if (!amt || amt <= 0) return alert('Sahi amount dalein!');
+      socket.emit('addCustomChips', { roomId: currentRoomId, phone: currentUser.phone, amount: amt });
+      closeAddChipsModal();
+    }
+
+    socket.on('chipsUpdated', ({ chips }) => {
+      document.getElementById('myWalletChips').innerText = chips;
+      alert(`₹${chips} points wallet me successfully update ho gaye!`);
     });
+
+    // --- 10. Round History UI ---
+    function openHistory() {
+      let html = '';
+      if (!latestHistory || latestHistory.length === 0) {
+        html = '<p style="color:#888;">Abhi koi round complete nahi hua.</p>';
+      } else {
+        latestHistory.forEach(h => {
+          html += `
+            <div style="border-bottom:1px solid #333; padding:6px 0;">
+              <b style="color:#ffd700;">Round #${h.round}</b> (${h.time})<br>
+              Winner: <b>${h.winner}</b> won ₹${h.pot}<br>
+              <span style="color:#aaa;">Players: ${h.players.map(p => `${p.name} (Added: +₹${p.addedPoints})`).join(', ')}</span>
+            </div>
+          `;
+        });
+      }
+      document.getElementById('historyContent').innerHTML = html;
+      document.getElementById('historyModal').style.display = 'flex';
+    }
   </script>
 </body>
 </html>

@@ -22,7 +22,7 @@
     .btn-add-chips { background: #ffd700; color: #000; font-weight: bold; border: none; border-radius: 12px; padding: 2px 8px; font-size: 10px; cursor: pointer; }
     .timer-badge { background: #d32f2f; color: #fff; padding: 3px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; }
 
-    /* Round Start Banner Notification (Rule 4) */
+    /* Round Start Banner */
     #roundStartBanner {
       position: fixed; top: 20%; left: 50%; transform: translate(-50%, -50%);
       background: linear-gradient(90deg, #b8860b, #ffd700, #b8860b);
@@ -35,7 +35,7 @@
       100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
     }
 
-    /* Enhanced Winner Announcement Modal (Rule 3) */
+    /* Winner Overlay */
     #winnerOverlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 95;
       display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
@@ -49,7 +49,7 @@
     .winner-title { font-size: 22px; font-weight: bold; color: #ffd700; margin: 4px 0; }
     .winner-amount { font-size: 26px; font-weight: 900; color: #00e676; margin-bottom: 8px; }
 
-    /* 3D Casino Table (Rule 8) */
+    /* 3D Casino Table */
     .table-box { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; margin-bottom: 235px; }
     .oval-table { 
       width: 95%; max-width: 480px; height: 380px; 
@@ -66,10 +66,14 @@
     }
 
     /* Opponent Seats */
-    .seat { position: absolute; width: 85px; text-align: center; transition: all 0.2s; }
+    .seat { position: absolute; width: 95px; text-align: center; transition: all 0.2s; }
     .seat.active .p-box { border-color: #ffd700; box-shadow: 0 0 16px #ffd700; transform: scale(1.05); }
     .seat.waiting .p-box { opacity: 0.5; border-color: #777; }
-    .p-box { background: rgba(0,0,0,0.8); border: 2px solid #333; border-radius: 10px; padding: 4px; font-size: 11px; }
+    .p-box { background: rgba(0,0,0,0.85); border: 2px solid #333; border-radius: 10px; padding: 4px; font-size: 11px; }
+    
+    /* Added Points Badge on Table */
+    .added-badge { background: #ffd700; color: #000; font-size: 9px; font-weight: 900; border-radius: 6px; padding: 1px 4px; margin-top: 2px; display: inline-block; }
+
     .mini-cards { display: flex; justify-content: center; gap: 2px; margin-top: 4px; }
     .mini-card { width: 22px; height: 32px; background: #fff; color: #000; border-radius: 3px; font-weight: bold; font-size: 10px; display: flex; align-items: center; justify-content: center; }
     .mini-card.back { background: repeating-linear-gradient(45deg, #1565c0, #1565c0 3px, #0d47a1 3px, #0d47a1 6px); color: #fff; }
@@ -94,7 +98,7 @@
     }
     .big-card.card-back::after { content: '♠'; color: rgba(255,255,255,0.7); font-size: 32px; }
 
-    /* Action Controls Raised (Rule 8: Safe from Android navigation buttons) */
+    /* Bottom Action Controls */
     .bottom-bar { 
       position: fixed; bottom: 28px; left: 10px; right: 10px; 
       background: rgba(4, 14, 7, 0.98); padding: 10px 8px; border-radius: 16px;
@@ -116,7 +120,7 @@
     .btn:disabled { opacity: 0.22; cursor: not-allowed; }
   </style>
 </head>
-<body>
+<body onclick="unlockAudio()">
 
   <!-- STEP 1: Mobile Login -->
   <div id="phoneOverlay" class="overlay">
@@ -140,7 +144,7 @@
     </div>
   </div>
 
-  <!-- Lobby & History Modal -->
+  <!-- Table Join Lobby -->
   <div id="lobbyOverlay" class="overlay" style="display:none;">
     <div class="card-modal">
       <h2 style="color:#ffd700;">GAME LOBBY</h2>
@@ -150,30 +154,30 @@
     </div>
   </div>
 
-  <!-- Add Chips Modal (Rule 6: 120s Freeze) -->
+  <!-- Add Chips Modal -->
   <div id="addChipsModal" class="overlay" style="display:none;">
     <div class="card-modal">
       <h2 style="color:#ffd700;">💰 ADD POINTS</h2>
       <p style="font-size:12px; color:#ccc; text-align:center;">Round timer 120s ke liye freeze ho gaya hai.</p>
-      <input type="number" id="chipsToAddInput" placeholder="Kitne points add karne hain?">
+      <input type="number" id="chipsToAddInput" placeholder="Points amount (e.g. 100)">
       <button class="action-btn" onclick="confirmAddChips()">ADD POINTS</button>
       <button class="action-btn" style="background:#444; color:#fff;" onclick="closeAddChipsModal()">CANCEL</button>
     </div>
   </div>
 
-  <!-- Round History Modal (Rule 10) -->
+  <!-- Round History & Points Audit Modal -->
   <div id="historyModal" class="overlay" style="display:none;">
-    <div class="card-modal" style="max-height: 80vh; overflow-y: auto;">
-      <h3 style="color:#ffd700;">📜 ROUND HISTORY</h3>
-      <div id="historyContent" style="font-size:11px; text-align:left; width:100%;"></div>
-      <button class="action-btn" style="background:#444; color:#fff; padding:6px; margin-top:8px;" onclick="document.getElementById('historyModal').style.display='none'">CLOSE</button>
+    <div class="card-modal" style="max-height: 80vh; overflow-y: auto; width: 90%; max-width: 360px;">
+      <h3 style="color:#ffd700;">📜 POINTS & ROUND LOGS</h3>
+      <div id="historyContent" style="font-size:12px; text-align:left; width:100%; margin-top:8px;"></div>
+      <button class="action-btn" style="background:#444; color:#fff; padding:8px; margin-top:10px;" onclick="document.getElementById('historyModal').style.display='none'">CLOSE</button>
     </div>
   </div>
 
-  <!-- Round Start Popup Banner (Rule 4) -->
+  <!-- Round Start Banner -->
   <div id="roundStartBanner">🔔 ROUND STARTED! Boot ₹1</div>
 
-  <!-- Enhanced Winner Modal (Rule 3) -->
+  <!-- Winner Modal -->
   <div id="winnerOverlay">
     <div class="winner-card">
       <div class="winner-trophy">🏆</div>
@@ -187,7 +191,7 @@
   <div class="top">
     <div>
       Room: <b id="displayRoomId" style="color:#ffd700;">-</b>
-      <button onclick="openHistory()" style="background:none; border:none; color:#ffd700; cursor:pointer; font-size:12px; margin-left:6px;">📜 Logs</button>
+      <button onclick="openHistory()" style="background:#13381e; border:1px solid #ffd700; color:#ffd700; border-radius:8px; padding:2px 8px; cursor:pointer; font-size:11px; margin-left:6px; font-weight:bold;">📜 LOGS</button>
     </div>
     <div class="profile-badge">
       <span id="profileName">User</span> | <b>₹<span id="myWalletChips">500</span></b>
@@ -235,17 +239,27 @@
     let canShowGlobally = false;
     let latestHistory = [];
 
-    // --- 7. Sound Effects using Web Audio API & Vibration ---
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    function playBeep(freq = 600, duration = 0.1) {
+    // --- Audio Unlock & Effects ---
+    let audioCtx = null;
+    function unlockAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playBeep(freq = 600, duration = 0.12) {
       try {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
+        unlockAudio();
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.frequency.value = freq;
         osc.connect(gain);
         gain.connect(audioCtx.destination);
         osc.start();
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
         osc.stop(audioCtx.currentTime + duration);
       } catch(e) {}
@@ -255,7 +269,6 @@
       if (navigator.vibrate) navigator.vibrate(pattern);
     }
 
-    // Auto-login
     window.addEventListener('load', () => {
       let savedPhone = localStorage.getItem('tp_phone');
       let savedName = localStorage.getItem('tp_name');
@@ -267,6 +280,7 @@
     });
 
     function sendOtpRequest() {
+      unlockAudio();
       const phone = document.getElementById('userPhone').value.trim();
       const name = document.getElementById('userName').value.trim();
       if (phone.length !== 10) return alert('10-digit phone number dalein!');
@@ -285,6 +299,7 @@
     }
 
     function verifyOtpCode() {
+      unlockAudio();
       const phone = document.getElementById('userPhone').value.trim();
       const name = document.getElementById('userName').value.trim();
       const otp = document.getElementById('otpInput').value.trim();
@@ -319,6 +334,7 @@
     });
 
     function enterRoom() {
+      unlockAudio();
       const roomId = document.getElementById('roomCodeInput').value.trim();
       if (!roomId) return alert('Room Code dalein!');
       localStorage.setItem('tp_room', roomId);
@@ -326,7 +342,6 @@
       socket.emit('joinOrCreateRoom', { roomId, phone: currentUser.phone });
     }
 
-    // --- 4. Round Start Banner ---
     socket.on('roundStarted', ({ roundNumber, pot, currentBet }) => {
       playBeep(880, 0.25);
       triggerVibrate([80, 40, 80]);
@@ -336,7 +351,6 @@
       setTimeout(() => { banner.style.display = 'none'; }, 2500);
     });
 
-    // --- 3. Enhanced Winner Announcement ---
     socket.on('enhancedWinner', ({ winnerName, pot, showData }) => {
       playBeep(523, 0.15);
       setTimeout(() => playBeep(659, 0.2), 150);
@@ -362,7 +376,6 @@
       setTimeout(() => { overlay.style.display = 'none'; }, 5000);
     });
 
-    // 1. Kick notification
     socket.on('kicked', (msg) => {
       alert(msg);
       location.reload();
@@ -372,7 +385,7 @@
     socket.on('playerMessage', (msg) => alert(msg));
     socket.on('timerUpdate', ({ timeLeft }) => {
       document.getElementById('timerDisplay').innerText = `⏳ ${timeLeft}s`;
-      if (timeLeft <= 5) playBeep(300, 0.05);
+      if (timeLeft <= 5) playBeep(320, 0.08);
     });
 
     socket.on('gameState', (state) => {
@@ -384,7 +397,6 @@
       document.getElementById('potAmount').innerText = state.pot;
       document.getElementById('betAmount').innerText = state.currentBet;
 
-      // 9. Matching Bet: Default customChaalInput strictly equals currentBet
       let chaalInput = document.getElementById('customChaalInput');
       if (!chaalInput.value || parseInt(chaalInput.value) < state.currentBet) {
         chaalInput.value = state.currentBet;
@@ -397,7 +409,8 @@
       let isYourTurn = you && activeP && activeP.id === you.id && !you.isWaiting;
 
       if (isYourTurn) {
-        triggerVibrate([60]);
+        triggerVibrate([70]);
+        playBeep(700, 0.15);
       }
 
       document.getElementById('btnSee').disabled = !(isYourTurn && you.state === 'blind');
@@ -456,12 +469,15 @@
       others.forEach((p, i) => {
         const angle = (i / total) * Math.PI + Math.PI;
         const rx = 145, ry = 135;
-        const x = 185 + rx * Math.cos(angle);
+        const x = 180 + rx * Math.cos(angle);
         const y = 145 + ry * Math.sin(angle);
 
         let cardHtml = p.cards 
           ? p.cards.map(c => `<div class="mini-card ${c.suit==='♥'||c.suit==='♦'?'red':''}">${c.rank}${c.suit}</div>`).join('')
           : `<div class="mini-card back">🂠</div><div class="mini-card back">🂠</div><div class="mini-card back">🂠</div>`;
+
+        // Agar kisi ne points add kiye hain toh badge dikhega
+        let addedBadge = p.addedPointsThisRound > 0 ? `<div class="added-badge">+₹${p.addedPointsThisRound} Added</div>` : '';
 
         const seatDiv = document.createElement('div');
         seatDiv.className = `seat ${players[activeIdx]?.phone === p.phone ? 'active' : ''} ${p.isWaiting ? 'waiting' : ''}`;
@@ -470,7 +486,8 @@
         seatDiv.innerHTML = `
           <div class="p-box">
             <b>${p.name}</b><br>
-            ₹${p.chips} | <span style="color:#ffd700;">${p.isWaiting ? 'WAITING' : (p.folded ? 'FOLD' : p.state.toUpperCase())}</span>
+            ₹${p.chips} | <span style="color:#ffd700;">${p.isWaiting ? 'WAIT' : (p.folded ? 'FOLD' : p.state.toUpperCase())}</span>
+            ${addedBadge}
           </div>
           <div class="mini-cards">${p.isWaiting ? '' : cardHtml}</div>
         `;
@@ -479,6 +496,7 @@
     }
 
     function adjustChaal(add) {
+      unlockAudio();
       let input = document.getElementById('customChaalInput');
       input.value = (parseInt(input.value) || 0) + add;
     }
@@ -488,13 +506,14 @@
     }
 
     function sendAction(type, amount) {
+      unlockAudio();
       playBeep(450, 0.08);
       triggerVibrate([40]);
       socket.emit('action', { roomId: currentRoomId, phone: currentUser.phone, type, amount });
     }
 
-    // --- 6. Custom Points Re-fill UI ---
     function openAddChips() {
+      unlockAudio();
       socket.emit('requestAddChips', { roomId: currentRoomId, phone: currentUser.phone });
       document.getElementById('addChipsModal').style.display = 'flex';
     }
@@ -516,18 +535,28 @@
       alert(`₹${chips} points wallet me successfully update ho gaye!`);
     });
 
-    // --- 10. Round History UI ---
+    // History and Audit Logs
     function openHistory() {
+      unlockAudio();
       let html = '';
       if (!latestHistory || latestHistory.length === 0) {
-        html = '<p style="color:#888;">Abhi koi round complete nahi hua.</p>';
+        html = '<p style="color:#aaa; text-align:center;">Abhi koi round complete nahi hua.</p>';
       } else {
         latestHistory.forEach(h => {
+          let playersBreakdown = h.players.map(p => {
+            let addInfo = p.addedPoints > 0 ? ` <b style="color:#00e676;">(+₹${p.addedPoints} Add)</b>` : '';
+            return `<div style="padding-left:8px; color:#bbb;">• ${p.name}: ₹${p.chips}${addInfo}</div>`;
+          }).join('');
+
           html += `
-            <div style="border-bottom:1px solid #333; padding:6px 0;">
-              <b style="color:#ffd700;">Round #${h.round}</b> (${h.time})<br>
-              Winner: <b>${h.winner}</b> won ₹${h.pot}<br>
-              <span style="color:#aaa;">Players: ${h.players.map(p => `${p.name} (Added: +₹${p.addedPoints})`).join(', ')}</span>
+            <div style="background:#020904; border:1px solid #1e5230; border-radius:8px; padding:8px; margin-bottom:8px;">
+              <div style="display:flex; justify-content:space-between; border-bottom:1px solid #222; padding-bottom:4px; margin-bottom:4px;">
+                <b style="color:#ffd700;">Round #${h.round}</b>
+                <span style="color:#888;">${h.time}</span>
+              </div>
+              <div>🏆 Winner: <b style="color:#00e676;">${h.winner}</b> won <b>₹${h.pot}</b></div>
+              <div style="margin-top:4px; font-size:11px; color:#ffd700;">Players & Added Points:</div>
+              ${playersBreakdown}
             </div>
           `;
         });

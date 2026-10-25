@@ -12,8 +12,8 @@
     /* Modals */
     .overlay { position: fixed; inset: 0; background: rgba(2, 6, 3, 0.96); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; }
     .card-modal { background: #06170d; border: 2px solid #ffd700; border-radius: 16px; padding: 20px; width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; align-items: center; box-shadow: 0 0 25px rgba(255, 215, 0, 0.25); }
-    input { padding: 12px; border-radius: 8px; border: 1px solid #1e5230; background: #030804; color: #fff; width: 100%; text-align: center; font-size: 16px; font-weight: bold; }
-    input:focus { border-color: #ffd700; outline: none; }
+    input, select { padding: 12px; border-radius: 8px; border: 1px solid #1e5230; background: #030804; color: #fff; width: 100%; text-align: center; font-size: 16px; font-weight: bold; }
+    input:focus, select:focus { border-color: #ffd700; outline: none; }
     .action-btn { padding: 12px; border: none; border-radius: 8px; background: linear-gradient(180deg, #ffd700, #b8860b); color: #000; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; box-shadow: 0 3px 6px rgba(0,0,0,0.4); }
 
     /* Top Navigation */
@@ -70,8 +70,6 @@
     .seat.active .p-box { border-color: #ffd700; box-shadow: 0 0 16px #ffd700; transform: scale(1.05); }
     .seat.waiting .p-box { opacity: 0.5; border-color: #777; }
     .p-box { background: rgba(0,0,0,0.85); border: 2px solid #333; border-radius: 10px; padding: 4px; font-size: 11px; }
-    
-    /* Added Points Badge on Table */
     .added-badge { background: #ffd700; color: #000; font-size: 9px; font-weight: 900; border-radius: 6px; padding: 1px 4px; margin-top: 2px; display: inline-block; }
 
     .mini-cards { display: flex; justify-content: center; gap: 2px; margin-top: 4px; }
@@ -79,7 +77,7 @@
     .mini-card.back { background: repeating-linear-gradient(45deg, #1565c0, #1565c0 3px, #0d47a1 3px, #0d47a1 6px); color: #fff; }
     .mini-card.red { color: #d32f2f; }
 
-    /* Big Player Hand */
+    /* Big Cards Hand */
     .my-hand-container {
       position: fixed; bottom: 135px; left: 0; right: 0;
       display: flex; justify-content: center; align-items: center; gap: 12px;
@@ -118,6 +116,9 @@
     .btn-show { background: linear-gradient(180deg, #26a69a, #00796b); }
     .btn-pack { background: linear-gradient(180deg, #78909c, #455a64); }
     .btn:disabled { opacity: 0.22; cursor: not-allowed; }
+
+    /* Single Player Waiting Indicator */
+    .waiting-bar { font-size: 12px; color: #ffd700; text-align: center; font-weight: bold; padding: 4px; }
   </style>
 </head>
 <body onclick="unlockAudio()">
@@ -126,7 +127,7 @@
   <div id="phoneOverlay" class="overlay">
     <div class="card-modal">
       <h2 style="color:#ffd700;">♠ REGISTER / LOGIN</h2>
-      <p style="font-size:12px; color:#aaa; text-align:center;">Apna 10-digit mobile number dalein:</p>
+      <p style="font-size:12px; color:#aaa; text-align:center;">10-digit mobile number dalein:</p>
       <input type="tel" id="userPhone" placeholder="Mobile Number" maxlength="10">
       <input type="text" id="userName" placeholder="Your Name">
       <button class="action-btn" onclick="sendOtpRequest()">GET OTP</button>
@@ -144,13 +145,30 @@
     </div>
   </div>
 
-  <!-- Table Join Lobby -->
+  <!-- Main Game Mode Selection (Room vs Bot) -->
   <div id="lobbyOverlay" class="overlay" style="display:none;">
     <div class="card-modal">
-      <h2 style="color:#ffd700;">GAME LOBBY</h2>
-      <div id="userStats" style="font-size:13px; text-align:center; line-height:1.5;"></div>
-      <input type="text" id="roomCodeInput" placeholder="Room Code (e.g. 1001)">
-      <button class="action-btn" onclick="enterRoom()">ENTER TABLE</button>
+      <h2 style="color:#ffd700;">SELECT MODE</h2>
+      <div id="userStats" style="font-size:12px; text-align:center; line-height:1.5;"></div>
+      
+      <!-- Option A: Friends Room -->
+      <div style="width:100%; border-top:1px solid #222; padding-top:10px;">
+        <input type="text" id="roomCodeInput" placeholder="Room Code (e.g. 1001)">
+        <button class="action-btn" style="margin-top:6px;" onclick="enterRoom()">PLAY WITH FRIENDS</button>
+      </div>
+
+      <div style="color:#888; font-size:12px; font-weight:bold;">--- OR ---</div>
+
+      <!-- Option B: Bot Mode -->
+      <div style="width:100%;">
+        <select id="botCountSelect">
+          <option value="1">1 Bot (1 vs 1)</option>
+          <option value="2">2 Bots (3 Players)</option>
+          <option value="3" selected>3 Bots (4 Players)</option>
+          <option value="4">4 Bots (5 Players)</option>
+        </select>
+        <button class="action-btn" style="background:linear-gradient(180deg,#00e676,#00897b); margin-top:6px;" onclick="startBotGame()">PLAY WITH BOTS</button>
+      </div>
     </div>
   </div>
 
@@ -158,14 +176,14 @@
   <div id="addChipsModal" class="overlay" style="display:none;">
     <div class="card-modal">
       <h2 style="color:#ffd700;">💰 ADD POINTS</h2>
-      <p style="font-size:12px; color:#ccc; text-align:center;">Round timer 120s ke liye freeze ho gaya hai.</p>
+      <p style="font-size:12px; color:#ccc; text-align:center;">Timer 120s freeze ho gaya hai.</p>
       <input type="number" id="chipsToAddInput" placeholder="Points amount (e.g. 100)">
       <button class="action-btn" onclick="confirmAddChips()">ADD POINTS</button>
       <button class="action-btn" style="background:#444; color:#fff;" onclick="closeAddChipsModal()">CANCEL</button>
     </div>
   </div>
 
-  <!-- Round History & Points Audit Modal -->
+  <!-- Logs Modal -->
   <div id="historyModal" class="overlay" style="display:none;">
     <div class="card-modal" style="max-height: 80vh; overflow-y: auto; width: 90%; max-width: 360px;">
       <h3 style="color:#ffd700;">📜 POINTS & ROUND LOGS</h3>
@@ -174,7 +192,6 @@
     </div>
   </div>
 
-  <!-- Round Start Banner -->
   <div id="roundStartBanner">🔔 ROUND STARTED! Boot ₹1</div>
 
   <!-- Winner Modal -->
@@ -210,11 +227,12 @@
     </div>
   </div>
 
-  <!-- Big Cards Hand -->
   <div class="my-hand-container" id="myBigCards"></div>
 
-  <!-- Bottom Panel -->
+  <!-- Action Controls -->
   <div class="bottom-bar">
+    <div id="waitingMsg" class="waiting-bar" style="display:none;">⏳ Waiting for another player to join...</div>
+    
     <div class="custom-chaal-row">
       <button class="chip-btn" onclick="adjustChaal(1)">+1</button>
       <button class="chip-btn" onclick="adjustChaal(5)">+5</button>
@@ -239,15 +257,11 @@
     let canShowGlobally = false;
     let latestHistory = [];
 
-    // --- Audio Unlock & Effects ---
+    // Audio Unlock
     let audioCtx = null;
     function unlockAudio() {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
     }
 
     function playBeep(freq = 600, duration = 0.12) {
@@ -283,7 +297,7 @@
       unlockAudio();
       const phone = document.getElementById('userPhone').value.trim();
       const name = document.getElementById('userName').value.trim();
-      if (phone.length !== 10) return alert('10-digit phone number dalein!');
+      if (phone.length !== 10) return alert('10-digit number dalein!');
       socket.emit('requestOtp', { phone });
     }
 
@@ -323,16 +337,15 @@
 
       let winRate = userData.gamesPlayed ? Math.round((userData.gamesWon / userData.gamesPlayed) * 100) : 0;
       document.getElementById('userStats').innerHTML = `
-        <b style="color:#ffd700; font-size:16px;">${userData.name}</b><br>
-        📱 ${userData.phone}<br>
-        💰 Wallet Chips: <b>₹${userData.chips}</b><br>
-        🎮 Games: <b>${userData.gamesPlayed}</b> | Won: <b>${userData.gamesWon}</b> (${winRate}%)
+        <b style="color:#ffd700; font-size:15px;">${userData.name}</b> (${userData.phone})<br>
+        💰 Wallet: <b>₹${userData.chips}</b> | 🎮 Games: <b>${userData.gamesPlayed}</b> (Won: ${userData.gamesWon})
       `;
 
       let savedRoom = localStorage.getItem('tp_room');
       if (savedRoom) document.getElementById('roomCodeInput').value = savedRoom;
     });
 
+    // Option A: Room enter
     function enterRoom() {
       unlockAudio();
       const roomId = document.getElementById('roomCodeInput').value.trim();
@@ -342,7 +355,14 @@
       socket.emit('joinOrCreateRoom', { roomId, phone: currentUser.phone });
     }
 
-    socket.on('roundStarted', ({ roundNumber, pot, currentBet }) => {
+    // Option B: Bot game start
+    function startBotGame() {
+      unlockAudio();
+      const botCount = document.getElementById('botCountSelect').value;
+      socket.emit('createBotRoom', { phone: currentUser.phone, botCount });
+    }
+
+    socket.on('roundStarted', ({ roundNumber }) => {
       playBeep(880, 0.25);
       triggerVibrate([80, 40, 80]);
       const banner = document.getElementById('roundStartBanner');
@@ -406,34 +426,36 @@
       let you = state.players.find(p => p.isYou);
       if (you) document.getElementById('myWalletChips').innerText = you.chips;
 
-      let isYourTurn = you && activeP && activeP.id === you.id && !you.isWaiting;
+      // Single player lock
+      let isSinglePlayer = state.totalPlayers < 2 || !state.isRoundActive;
+      document.getElementById('waitingMsg').style.display = isSinglePlayer ? 'block' : 'none';
+
+      let isYourTurn = !isSinglePlayer && you && activeP && activeP.id === you.id && !you.isWaiting;
 
       if (isYourTurn) {
         triggerVibrate([70]);
         playBeep(700, 0.15);
       }
 
-      document.getElementById('btnSee').disabled = !(isYourTurn && you.state === 'blind');
-      document.getElementById('btnBand').disabled = !(isYourTurn && you.state === 'blind');
-      document.getElementById('btnCounter').disabled = !(isYourTurn && you.state === 'blind' && state.lastMoveWasSeen);
-      document.getElementById('btnChaal').disabled = !isYourTurn;
-      document.getElementById('btnPack').disabled = !isYourTurn;
-      document.getElementById('btnShow').disabled = !(isYourTurn && state.canShow);
+      document.getElementById('btnSee').disabled = isSinglePlayer || !(isYourTurn && you.state === 'blind');
+      document.getElementById('btnBand').disabled = isSinglePlayer || !(isYourTurn && you.state === 'blind');
+      document.getElementById('btnCounter').disabled = isSinglePlayer || !(isYourTurn && you.state === 'blind' && state.lastMoveWasSeen);
+      document.getElementById('btnChaal').disabled = isSinglePlayer || !isYourTurn;
+      document.getElementById('btnPack').disabled = isSinglePlayer || !isYourTurn;
+      document.getElementById('btnShow').disabled = isSinglePlayer || !(isYourTurn && state.canShow);
 
       renderTable(state.players, state.activeIdx);
-      renderMyBigCards(you);
+      renderMyBigCards(you, isSinglePlayer);
     });
 
     function triggerShow() {
-      if (!canShowGlobally) {
-        return alert('Show tabhi ho sakta hai jab aakhiri dono players Seen ho chuke hon!');
-      }
+      if (!canShowGlobally) return alert('Show tabhi hoga jab aakhiri dono players Seen hon!');
       sendAction('SHOW');
     }
 
-    function renderMyBigCards(you) {
+    function renderMyBigCards(you, isSingle) {
       const container = document.getElementById('myBigCards');
-      if (!you || you.folded || you.isWaiting) {
+      if (!you || you.folded || you.isWaiting || isSingle) {
         container.innerHTML = you?.isWaiting 
           ? `<div style="background:rgba(0,0,0,0.7); border:1px solid #ffd700; padding:6px 14px; border-radius:15px; font-weight:bold; color:#ffd700;">⏳ Agle Round ke liye Wait karein</div>` 
           : '';
@@ -476,7 +498,6 @@
           ? p.cards.map(c => `<div class="mini-card ${c.suit==='♥'||c.suit==='♦'?'red':''}">${c.rank}${c.suit}</div>`).join('')
           : `<div class="mini-card back">🂠</div><div class="mini-card back">🂠</div><div class="mini-card back">🂠</div>`;
 
-        // Agar kisi ne points add kiye hain toh badge dikhega
         let addedBadge = p.addedPointsThisRound > 0 ? `<div class="added-badge">+₹${p.addedPointsThisRound} Added</div>` : '';
 
         const seatDiv = document.createElement('div');
@@ -535,7 +556,6 @@
       alert(`₹${chips} points wallet me successfully update ho gaye!`);
     });
 
-    // History and Audit Logs
     function openHistory() {
       unlockAudio();
       let html = '';

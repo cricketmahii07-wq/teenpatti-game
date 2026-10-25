@@ -22,16 +22,15 @@
     .timer-badge { background: #d32f2f; color: #fff; padding: 3px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; }
 
     /* 3D Casino Table */
-    .table-box { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; margin-bottom: 170px; }
+    .table-box { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; margin-bottom: 210px; }
     .oval-table { 
-      width: 95%; max-width: 480px; height: 430px; 
+      width: 95%; max-width: 480px; height: 390px; 
       background: radial-gradient(ellipse at center, #1b6336 0%, #0c3319 75%, #051c0d 100%); 
       border: 14px solid #28150a; border-radius: 140px; position: relative; 
       box-shadow: inset 0 0 40px rgba(0,0,0,0.9), 0 0 30px rgba(0,0,0,0.8); 
     }
     .oval-table::before { content: ''; position: absolute; inset: 4px; border: 2px dashed rgba(255,215,0,0.3); border-radius: 125px; pointer-events: none; }
 
-    /* Center Pot */
     .pot-center { 
       position: absolute; top: 44%; left: 50%; transform: translate(-50%, -50%); 
       background: rgba(0,0,0,0.85); border: 2px solid #ffd700; padding: 8px 20px; 
@@ -47,9 +46,9 @@
     .mini-card.back { background: repeating-linear-gradient(45deg, #1565c0, #1565c0 3px, #0d47a1 3px, #0d47a1 6px); color: #fff; }
     .mini-card.red { color: #d32f2f; }
 
-    /* Dedicated Big Cards for Player */
+    /* Dedicated Big Cards for Player (Raised slightly higher) */
     .my-hand-container {
-      position: fixed; bottom: 85px; left: 0; right: 0;
+      position: fixed; bottom: 125px; left: 0; right: 0;
       display: flex; justify-content: center; align-items: center; gap: 12px;
       z-index: 40; pointer-events: none;
     }
@@ -66,26 +65,26 @@
     }
     .big-card.card-back::after { content: '♠'; color: rgba(255,255,255,0.7); font-size: 28px; }
 
-    /* Action Controls */
+    /* 3. Action Controls Shifted Upward (bottom: 24px) */
     .bottom-bar { 
-      position: fixed; bottom: 8px; left: 8px; right: 8px; 
-      background: rgba(3, 10, 5, 0.98); padding: 8px; border-radius: 12px;
-      border: 1px solid #1e5230; display: flex; flex-direction: column; gap: 6px; z-index: 50; 
-      box-shadow: 0 -4px 15px rgba(0,0,0,0.8);
+      position: fixed; bottom: 24px; left: 10px; right: 10px; 
+      background: rgba(4, 14, 7, 0.98); padding: 10px 8px; border-radius: 14px;
+      border: 1.5px solid #23653b; display: flex; flex-direction: column; gap: 8px; z-index: 50; 
+      box-shadow: 0 -4px 18px rgba(0,0,0,0.9);
     }
     .custom-chaal-row { display: flex; gap: 6px; align-items: center; justify-content: center; }
-    .custom-chaal-row input { width: 90px; padding: 6px; font-size: 14px; text-align: center; }
-    .chip-btn { padding: 6px 10px; border: 1px solid #ffd700; background: #13381e; color: #ffd700; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; }
+    .custom-chaal-row input { width: 95px; padding: 7px; font-size: 14px; text-align: center; }
+    .chip-btn { padding: 7px 11px; border: 1px solid #ffd700; background: #13381e; color: #ffd700; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; }
 
     .btn-row { display: flex; gap: 6px; justify-content: center; }
-    .btn { flex: 1; padding: 9px 0; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: #fff; font-size: 11px; text-transform: uppercase; }
+    .btn { flex: 1; padding: 11px 0; border: none; border-radius: 7px; font-weight: bold; cursor: pointer; color: #fff; font-size: 11px; text-transform: uppercase; }
     .btn-see { background: linear-gradient(180deg, #29b6f6, #0288d1); }
     .btn-band { background: linear-gradient(180deg, #ab47bc, #7b1fa2); }
     .btn-counter { background: linear-gradient(180deg, #ff4081, #c2185b); }
-    .btn-chaal { background: linear-gradient(180deg, #ffa726, #f57c00); }
+    .btn-chaal { background: linear-gradient(180deg, #ffa726, #f57c00); font-size: 12px; }
     .btn-show { background: linear-gradient(180deg, #26a69a, #00796b); }
     .btn-pack { background: linear-gradient(180deg, #78909c, #455a64); }
-    .btn:disabled { opacity: 0.25; cursor: not-allowed; }
+    .btn:disabled { opacity: 0.22; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -126,7 +125,7 @@
   <div class="top">
     <div>Room: <b id="displayRoomId" style="color:#ffd700;">-</b></div>
     <div class="profile-badge">
-      <span id="profileName">User</span> | <b>₹<span id="myWalletChips">0</span></b>
+      <span id="profileName">User</span> | <b>₹<span id="myWalletChips">500</span></b>
     </div>
     <div id="timerDisplay" class="timer-badge">⏳ 30s</div>
   </div>
@@ -141,10 +140,10 @@
     </div>
   </div>
 
-  <!-- Player Big Cards -->
+  <!-- Big Player Cards -->
   <div class="my-hand-container" id="myBigCards"></div>
 
-  <!-- Controls -->
+  <!-- Upward Positioned Action Controls -->
   <div class="bottom-bar">
     <div class="custom-chaal-row">
       <button class="chip-btn" onclick="adjustChaal(1)">+1</button>
@@ -158,7 +157,7 @@
       <button class="btn btn-see" id="btnSee" onclick="sendAction('SEE')">SEE CARDS</button>
       <button class="btn btn-band" id="btnBand" onclick="sendAction('BAND')">BAND (2x)</button>
       <button class="btn btn-counter" id="btnCounter" onclick="sendAction('COUNTER')">COUNTER (3x)</button>
-      <button class="btn btn-show" id="btnShow" onclick="sendAction('SHOW')">SHOW</button>
+      <button class="btn btn-show" id="btnShow" onclick="triggerShow()">SHOW</button>
       <button class="btn btn-pack" id="btnPack" onclick="sendAction('PACK')">PACK</button>
     </div>
   </div>
@@ -167,6 +166,7 @@
     const socket = io();
     let currentRoomId = null;
     let currentUser = null;
+    let canShowGlobally = false;
 
     window.addEventListener('load', () => {
       let savedPhone = localStorage.getItem('tp_phone');
@@ -174,20 +174,18 @@
       if (savedPhone) {
         document.getElementById('userPhone').value = savedPhone;
         if (savedName) document.getElementById('userName').value = savedName;
-        // Direct auto-login bypass for quick re-entry
         socket.emit('verifyOtp', { phone: savedPhone, otp: '1234', name: savedName });
       }
     });
 
     function sendOtpRequest() {
       const phone = document.getElementById('userPhone').value.trim();
-      const name = document.getElementById('userName').value.trim();
       if (phone.length !== 10) return alert('10-digit phone number dalein!');
       socket.emit('requestOtp', { phone });
     }
 
     socket.on('otpSent', ({ phone, otp }) => {
-      alert(`📩 OTP sent to ${phone}: [ ${otp} ] (Testing Code: 1234 bhi kaam karega)`);
+      alert(`📩 OTP for ${phone}: [ ${otp} ] (Testing Code: 1234)`);
       document.getElementById('phoneOverlay').style.display = 'none';
       document.getElementById('otpOverlay').style.display = 'flex';
     });
@@ -247,6 +245,7 @@
 
     socket.on('gameState', (state) => {
       currentRoomId = state.roomId;
+      canShowGlobally = state.canShow;
       document.getElementById('displayRoomId').innerText = state.roomId;
       document.getElementById('lobbyOverlay').style.display = 'none';
       document.getElementById('potAmount').innerText = state.pot;
@@ -268,11 +267,20 @@
       document.getElementById('btnCounter').disabled = !(isYourTurn && you.state === 'blind' && state.lastMoveWasSeen);
       document.getElementById('btnChaal').disabled = !isYourTurn;
       document.getElementById('btnPack').disabled = !isYourTurn;
-      document.getElementById('btnShow').disabled = !isYourTurn;
+      
+      // Show tabhi active hoga jab aapki turn ho aur dono player SEEN hon
+      document.getElementById('btnShow').disabled = !(isYourTurn && state.canShow);
 
       renderTable(state.players, state.activeIdx);
       renderMyBigCards(you);
     });
+
+    function triggerShow() {
+      if (!canShowGlobally) {
+        return alert('Show tabhi ho sakta hai jab aakhiri dono players Seen ho chuke hon!');
+      }
+      sendAction('SHOW');
+    }
 
     function renderMyBigCards(you) {
       const container = document.getElementById('myBigCards');
@@ -309,9 +317,9 @@
 
       others.forEach((p, i) => {
         const angle = (i / total) * Math.PI + Math.PI;
-        const rx = 145, ry = 140;
+        const rx = 145, ry = 135;
         const x = 185 + rx * Math.cos(angle);
-        const y = 160 + ry * Math.sin(angle);
+        const y = 150 + ry * Math.sin(angle);
 
         let cardHtml = p.cards 
           ? p.cards.map(c => `<div class="mini-card ${c.suit==='♥'||c.suit==='♦'?'red':''}">${c.rank}${c.suit}</div>`).join('')

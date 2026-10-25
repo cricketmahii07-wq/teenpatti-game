@@ -10,11 +10,9 @@ const io = new Server(server, { cors: { origin: '*' } });
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// In-Memory Database (Phone -> User & OTP)
 const users = {};
 const pendingOtps = {};
 
-// Game Engine Memory
 const rooms = {};
 const SUITS = ['♠', '♥', '♦', '♣'];
 const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -114,6 +112,10 @@ function finishGame(room, winner) {
 }
 
 function sanitizeRoomState(room, phone) {
+  let alive = room.players.filter(p => !p.folded);
+  // Dono bache hue players SEEN hain ya nahi
+  let canShowNow = alive.length === 2 && alive.every(p => p.state === 'seen');
+
   return {
     roomId: room.id,
     pot: room.pot,
@@ -121,6 +123,7 @@ function sanitizeRoomState(room, phone) {
     activeIdx: room.activeIdx,
     lastMoveWasSeen: room.lastMoveWasSeen,
     timeLeft: room.timeLeft || 30,
+    canShow: canShowNow,
     players: room.players.map((p) => ({
       id: p.id,
       phone: p.phone,
@@ -163,31 +166,28 @@ function nextTurn(room) {
 }
 
 io.on('connection', (socket) => {
-  // 1. Send OTP
   socket.on('requestOtp', ({ phone }) => {
     if (!phone || phone.length !== 10) {
       return socket.emit('authError', 'Kripya sahi 10-digit mobile number dalein!');
     }
     const generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
     pendingOtps[phone] = generatedOtp;
-
-    // Send OTP to client
     socket.emit('otpSent', { phone, otp: generatedOtp });
   });
 
-  // 2. Verify OTP & Register/Login
   socket.on('verifyOtp', ({ phone, otp, name }) => {
-    if (pendingOtps[phone] !== otp && otp !== '1234') { // 1234 demo bypass code
+    if (pendingOtps[phone] !== otp && otp !== '1234') {
       return socket.emit('authError', 'Galat OTP! Kripya dobara check karein.');
     }
 
     delete pendingOtps[phone];
 
     if (!users[phone]) {
+      // 1. Initial points set to 500
       users[phone] = {
         phone,
         name: name || `Player_${phone.slice(-4)}`,
-        chips: 1000,
+        chips: 500,
         gamesPlayed: 0,
         gamesWon: 0
       };
@@ -196,7 +196,6 @@ io.on('connection', (socket) => {
     socket.emit('authSuccess', users[phone]);
   });
 
-  // 3. Room Management
   socket.on('joinOrCreateRoom', ({ roomId, phone }) => {
     const user = users[phone];
     if (!user) return socket.emit('errorMsg', 'Session expired, login again!');
@@ -246,7 +245,6 @@ io.on('connection', (socket) => {
     broadcastRoom(roomId);
   });
 
-  // 4. In-Game Actions
   socket.on('action', ({ roomId, phone, type, amount }) => {
     const room = rooms[roomId];
     if (!room) return;
@@ -298,6 +296,11 @@ io.on('connection', (socket) => {
     } else if (type === 'SHOW') {
       let alive = room.players.filter(p => !p.folded);
       if (alive.length > 2) return socket.emit('errorMsg', 'Show sirf last ke 2 players me hoga!');
+
+      // 2. Rule: Dono ka SEEN hona zaroori hai
+      if (alive.some(p => p.state === 'blind')) {
+        return socket.emit('errorMsg', 'Show tabhi ho sakta hai jab dono players Seen ho chuke hon!');
+      }
 
       let caller = player;
       let opp = alive.find(p => p.phone !== caller.phone);

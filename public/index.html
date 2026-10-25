@@ -22,6 +22,13 @@
     .btn-add-chips { background: #ffd700; color: #000; font-weight: bold; border: none; border-radius: 12px; padding: 2px 8px; font-size: 10px; cursor: pointer; }
     .timer-badge { background: #d32f2f; color: #fff; padding: 3px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; }
 
+    /* Live Action Feed Banner */
+    .move-banner {
+      background: rgba(0,0,0,0.75); border: 1px solid #ffd700; color: #ffd700;
+      padding: 6px 14px; font-size: 12px; font-weight: bold; text-align: center;
+      margin: 4px 10px 0 10px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+
     /* Round Start Banner */
     #roundStartBanner {
       position: fixed; top: 20%; left: 50%; transform: translate(-50%, -50%);
@@ -77,7 +84,7 @@
     .mini-card.back { background: repeating-linear-gradient(45deg, #1565c0, #1565c0 3px, #0d47a1 3px, #0d47a1 6px); color: #fff; }
     .mini-card.red { color: #d32f2f; }
 
-    /* Big Cards Hand */
+    /* Big Player Hand */
     .my-hand-container {
       position: fixed; bottom: 135px; left: 0; right: 0;
       display: flex; justify-content: center; align-items: center; gap: 12px;
@@ -117,13 +124,12 @@
     .btn-pack { background: linear-gradient(180deg, #78909c, #455a64); }
     .btn:disabled { opacity: 0.22; cursor: not-allowed; }
 
-    /* Single Player Waiting Indicator */
     .waiting-bar { font-size: 12px; color: #ffd700; text-align: center; font-weight: bold; padding: 4px; }
   </style>
 </head>
 <body onclick="unlockAudio()">
 
-  <!-- STEP 1: Mobile Login -->
+  <!-- STEP 1: Phone -->
   <div id="phoneOverlay" class="overlay">
     <div class="card-modal">
       <h2 style="color:#ffd700;">♠ REGISTER / LOGIN</h2>
@@ -134,7 +140,7 @@
     </div>
   </div>
 
-  <!-- STEP 2: OTP Verification -->
+  <!-- STEP 2: OTP -->
   <div id="otpOverlay" class="overlay" style="display:none;">
     <div class="card-modal">
       <h2 style="color:#ffd700;">ENTER OTP</h2>
@@ -145,13 +151,12 @@
     </div>
   </div>
 
-  <!-- Main Game Mode Selection (Room vs Bot) -->
+  <!-- Mode Selection -->
   <div id="lobbyOverlay" class="overlay" style="display:none;">
     <div class="card-modal">
       <h2 style="color:#ffd700;">SELECT MODE</h2>
       <div id="userStats" style="font-size:12px; text-align:center; line-height:1.5;"></div>
       
-      <!-- Option A: Friends Room -->
       <div style="width:100%; border-top:1px solid #222; padding-top:10px;">
         <input type="text" id="roomCodeInput" placeholder="Room Code (e.g. 1001)">
         <button class="action-btn" style="margin-top:6px;" onclick="enterRoom()">PLAY WITH FRIENDS</button>
@@ -159,7 +164,6 @@
 
       <div style="color:#888; font-size:12px; font-weight:bold;">--- OR ---</div>
 
-      <!-- Option B: Bot Mode -->
       <div style="width:100%;">
         <select id="botCountSelect">
           <option value="1">1 Bot (1 vs 1)</option>
@@ -217,12 +221,15 @@
     <div id="timerDisplay" class="timer-badge">⏳ 30s</div>
   </div>
 
+  <!-- Real-time Move Feed Banner -->
+  <div class="move-banner" id="lastMoveBanner">Game Ready...</div>
+
   <!-- Oval Poker Table -->
   <div class="table-box">
     <div class="oval-table" id="tableSeats">
       <div class="pot-center">
         <div style="color:#ffd700; font-size:18px; font-weight:bold;">₹<span id="potAmount">0</span></div>
-        <div style="font-size:10px; color:#aaa;">Chaal: ₹<span id="betAmount">1</span></div>
+        <div style="font-size:10px; color:#aaa;">Next Bet: ₹<span id="betAmount">1</span></div>
       </div>
     </div>
   </div>
@@ -237,14 +244,14 @@
       <button class="chip-btn" onclick="adjustChaal(1)">+1</button>
       <button class="chip-btn" onclick="adjustChaal(5)">+5</button>
       <button class="chip-btn" onclick="adjustChaal(10)">+10</button>
-      <input type="number" id="customChaalInput" placeholder="Chaal">
+      <input type="number" id="customChaalInput" placeholder="Amount">
       <button class="btn btn-chaal" style="flex: initial; padding: 7px 14px;" id="btnChaal" onclick="submitChaal()">CHAAL</button>
     </div>
 
     <div class="btn-row">
       <button class="btn btn-see" id="btnSee" onclick="sendAction('SEE')">SEE CARDS</button>
-      <button class="btn btn-band" id="btnBand" onclick="sendAction('BAND')">BAND (2x)</button>
-      <button class="btn btn-counter" id="btnCounter" onclick="sendAction('COUNTER')">COUNTER (3x)</button>
+      <button class="btn btn-band" id="btnBand" onclick="submitBand()">BAND</button>
+      <button class="btn btn-counter" id="btnCounter" onclick="submitCounter()">COUNTER</button>
       <button class="btn btn-show" id="btnShow" onclick="triggerShow()">SHOW</button>
       <button class="btn btn-pack" id="btnPack" onclick="sendAction('PACK')">PACK</button>
     </div>
@@ -257,7 +264,6 @@
     let canShowGlobally = false;
     let latestHistory = [];
 
-    // Audio Unlock
     let audioCtx = null;
     function unlockAudio() {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -345,7 +351,6 @@
       if (savedRoom) document.getElementById('roomCodeInput').value = savedRoom;
     });
 
-    // Option A: Room enter
     function enterRoom() {
       unlockAudio();
       const roomId = document.getElementById('roomCodeInput').value.trim();
@@ -355,7 +360,6 @@
       socket.emit('joinOrCreateRoom', { roomId, phone: currentUser.phone });
     }
 
-    // Option B: Bot game start
     function startBotGame() {
       unlockAudio();
       const botCount = document.getElementById('botCountSelect').value;
@@ -417,6 +421,11 @@
       document.getElementById('potAmount').innerText = state.pot;
       document.getElementById('betAmount').innerText = state.currentBet;
 
+      // Update Live Move Banner
+      if (state.lastMoveAnnouncement) {
+        document.getElementById('lastMoveBanner').innerText = state.lastMoveAnnouncement;
+      }
+
       let chaalInput = document.getElementById('customChaalInput');
       if (!chaalInput.value || parseInt(chaalInput.value) < state.currentBet) {
         chaalInput.value = state.currentBet;
@@ -426,7 +435,6 @@
       let you = state.players.find(p => p.isYou);
       if (you) document.getElementById('myWalletChips').innerText = you.chips;
 
-      // Single player lock
       let isSinglePlayer = state.totalPlayers < 2 || !state.isRoundActive;
       document.getElementById('waitingMsg').style.display = isSinglePlayer ? 'block' : 'none';
 
@@ -524,6 +532,14 @@
 
     function submitChaal() {
       sendAction('CHAAL', parseInt(document.getElementById('customChaalInput').value));
+    }
+
+    function submitBand() {
+      sendAction('BAND', parseInt(document.getElementById('customChaalInput').value));
+    }
+
+    function submitCounter() {
+      sendAction('COUNTER', parseInt(document.getElementById('customChaalInput').value));
     }
 
     function sendAction(type, amount) {

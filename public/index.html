@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>VIP Teen Patti Pro</title>
-  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
     body { background: #020704; color: #fff; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
@@ -16,7 +16,7 @@
     input:focus, select:focus { border-color: #ffd700; outline: none; }
     .action-btn { padding: 12px; border: none; border-radius: 8px; background: linear-gradient(180deg, #ffd700, #b8860b); color: #000; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; box-shadow: 0 3px 6px rgba(0,0,0,0.4); }
 
-    /* Toast Notification (No alert popup freeze) */
+    /* Toast Notification */
     #toastMsg {
       position: fixed; top: 15px; left: 50%; transform: translateX(-50%);
       background: #d32f2f; color: #fff; padding: 8px 16px; border-radius: 20px;
@@ -114,7 +114,7 @@
 
   <div id="toastMsg"></div>
 
-  <!-- STEP 1: Phone Login (Direct Instant Play) -->
+  <!-- STEP 1: Phone Login -->
   <div id="phoneOverlay" class="overlay">
     <div class="card-modal">
       <h2 style="color:#ffd700;">♠ REGISTER / LOGIN</h2>
@@ -322,10 +322,44 @@
 
     function directLoginAction() {
       unlockAudio();
-      const phone = document.getElementById('userPhone').value.trim();
-      const name = document.getElementById('userName').value.trim();
-      if (phone.length < 10) return showToast('10-digit number dalein!');
+      const phoneInput = document.getElementById('userPhone');
+      const nameInput = document.getElementById('userName');
+      
+      const phone = phoneInput ? phoneInput.value.trim() : "";
+      const name = nameInput ? nameInput.value.trim() : "";
+
+      if (!phone || phone.length < 10) {
+        showToast('10-digit mobile number dalein!');
+        return;
+      }
+
+      const btn = document.querySelector('#phoneOverlay .action-btn');
+      if (btn) {
+        btn.innerText = "CONNECTING...";
+        btn.disabled = true;
+      }
+
+      if (!socket.connected) socket.connect();
       socket.emit('directLogin', { phone, name });
+
+      setTimeout(() => {
+        if (document.getElementById('phoneOverlay').style.display !== 'none') {
+          currentUser = {
+            phone: phone,
+            name: name || `Player_${phone.slice(-4)}`,
+            chips: 500,
+            gamesPlayed: 0
+          };
+          document.getElementById('phoneOverlay').style.display = 'none';
+          document.getElementById('lobbyOverlay').style.display = 'flex';
+          document.getElementById('profileName').innerText = currentUser.name;
+          document.getElementById('myWalletChips').innerText = currentUser.chips;
+          document.getElementById('userStats').innerHTML = `
+            <b style="color:#ffd700; font-size:15px;">${currentUser.name}</b> (${currentUser.phone})<br>
+            💰 Wallet: <b>₹${currentUser.chips}</b> | 🎮 Games: <b>0</b>
+          `;
+        }
+      }, 800);
     }
 
     socket.on('authSuccess', (userData) => {
@@ -383,4 +417,220 @@
       socket.emit('joinOrCreateRoom', { roomId: code, phone: currentUser.phone });
     }
 
-    
+    function startBotMatch() {
+      unlockAudio();
+      let botCount = document.getElementById('botCountSelect').value;
+      let difficulty = document.getElementById('botDifficultySelect').value;
+      let tableMode = document.getElementById('botTableModeSelect').value;
+      document.getElementById('botMenuModal').style.display = 'none';
+      socket.emit('createBotRoom', { phone: currentUser.phone, botCount, difficulty, tableMode });
+    }
+
+    function requestSideShowAction() {
+      socket.emit('requestSideShow', { roomId: currentRoomId, phone: currentUser.phone });
+    }
+
+    socket.on('sideShowPrompt', ({ callerName, callerPhone }) => {
+      pendingSideShowCaller = callerPhone;
+      document.getElementById('sideShowText').innerText = `${callerName} ne aapse Side Show maanga hai!`;
+      document.getElementById('sideShowModal').style.display = 'flex';
+    });
+
+    function answerSideShow(accepted) {
+      document.getElementById('sideShowModal').style.display = 'none';
+      socket.emit('respondSideShow', { roomId: currentRoomId, accepted, callerPhone: pendingSideShowCaller, phone: currentUser.phone });
+    }
+
+    function toggleChat() {
+      let d = document.getElementById('chatDrawer');
+      d.style.display = d.style.display === 'flex' ? 'none' : 'flex';
+    }
+
+    function sendChat() {
+      let input = document.getElementById('chatInput');
+      let text = input.value.trim();
+      if (!text) return;
+      socket.emit('sendChatMessage', { roomId: currentRoomId, phone: currentUser.phone, message: text });
+      input.value = '';
+    }
+
+    socket.on('newChatMessage', ({ sender, text, time }) => {
+      let container = document.getElementById('chatMessages');
+      let div = document.createElement('div');
+      div.className = 'chat-msg';
+      div.innerHTML = `<b style="color:#ffd700;">${sender}:</b> ${text} <span style="font-size:9px; color:#888;">${time}</span>`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    });
+
+    socket.on('gameState', (state) => {
+      currentRoomId = state.roomId;
+      canShowGlobally = state.canShow;
+      document.getElementById('displayRoomId').innerText = `${state.roomId}`;
+      document.getElementById('potAmount').innerText = state.pot;
+      document.getElementById('betAmount').innerText = state.currentBet;
+
+      if (state.lastMoveAnnouncement) {
+        document.getElementById('lastMoveBanner').innerText = state.lastMoveAnnouncement;
+      }
+
+      let chaalInput = document.getElementById('customChaalInput');
+      if (!chaalInput.value || parseInt(chaalInput.value) < state.currentBet) {
+        chaalInput.value = state.currentBet;
+      }
+
+      let activeP = state.players[state.activeIdx];
+      let you = state.players.find(p => p.isYou);
+      if (you) document.getElementById('myWalletChips').innerText = you.chips;
+
+      let isSinglePlayer = state.totalPlayers < 2 || !state.isRoundActive;
+      let isYourTurn = !isSinglePlayer && you && activeP && activeP.id === you.id && !you.isWaiting;
+
+      if (isYourTurn) playBeep(700, 0.15);
+
+      document.getElementById('btnSee').disabled = isSinglePlayer || !(isYourTurn && you.state === 'blind');
+      
+      let canBand = isYourTurn && you.state === 'blind' && (you.bandCount || 0) < 4;
+      document.getElementById('btnBand').disabled = isSinglePlayer || !canBand;
+      
+      document.getElementById('btnCounter').disabled = isSinglePlayer || !(isYourTurn && you.state === 'blind' && state.lastMoveWasSeen);
+      document.getElementById('btnChaal').disabled = isSinglePlayer || !(isYourTurn && you.state === 'seen');
+      document.getElementById('btnSideShow').disabled = isSinglePlayer || !(isYourTurn && state.canSideShow);
+      document.getElementById('btnPack').disabled = isSinglePlayer || !isYourTurn;
+      document.getElementById('btnShow').disabled = isSinglePlayer || !(isYourTurn && state.canShow);
+
+      renderTable(state.players, state.activeIdx);
+      renderMyBigCards(you, isSinglePlayer);
+    });
+
+    function renderMyBigCards(you, isSingle) {
+      const container = document.getElementById('myBigCards');
+      if (!you || you.folded || you.isWaiting || isSingle) {
+        container.innerHTML = '';
+        return;
+      }
+
+      if (you.state === 'seen' && you.cards) {
+        container.innerHTML = you.cards.map(c => {
+          let isRed = c.suit === '♥' || c.suit === '♦';
+          return `
+            <div class="big-card ${isRed ? 'red':''}">
+              <div>${c.rank}</div>
+              <div style="font-size:26px; text-align:center;">${c.suit}</div>
+              <div style="font-size:12px; text-align:right;">${c.rank}</div>
+            </div>`;
+        }).join('');
+      } else {
+        container.innerHTML = `
+          <div class="big-card card-back"><div class="addi-logo">ADDI</div></div>
+          <div class="big-card card-back"><div class="addi-logo">ADDI</div></div>
+          <div class="big-card card-back"><div class="addi-logo">ADDI</div></div>
+        `;
+      }
+    }
+
+    function renderTable(players, activeIdx) {
+      const container = document.getElementById('tableSeats');
+      container.querySelectorAll('.seat').forEach(e => e.remove());
+
+      const others = players.filter(p => !p.isYou);
+      const total = others.length;
+
+      others.forEach((p, i) => {
+        const angle = (i / total) * Math.PI + Math.PI;
+        const rx = 145, ry = 135;
+        const x = 180 + rx * Math.cos(angle);
+        const y = 145 + ry * Math.sin(angle);
+
+        let cardHtml = p.cards 
+          ? p.cards.map(c => `<div class="mini-card ${c.suit==='♥'||c.suit==='♦'?'red':''}">${c.rank}${c.suit}</div>`).join('')
+          : `<div class="mini-card back">ADDI</div><div class="mini-card back">ADDI</div><div class="mini-card back">ADDI</div>`;
+
+        const seatDiv = document.createElement('div');
+        seatDiv.className = `seat ${players[activeIdx]?.phone === p.phone ? 'active' : ''} ${p.isWaiting ? 'waiting' : ''}`;
+        seatDiv.style.left = `${x}px`;
+        seatDiv.style.top = `${y}px`;
+        seatDiv.innerHTML = `
+          <div class="p-box">
+            <b>${p.name}</b><br>
+            ₹${p.chips} | <span style="color:#ffd700;">${p.isWaiting ? 'WAIT' : (p.folded ? 'FOLD' : p.state.toUpperCase())}</span>
+          </div>
+          <div class="mini-cards">${p.isWaiting ? '' : cardHtml}</div>
+        `;
+        container.appendChild(seatDiv);
+      });
+    }
+
+    function adjustChaal(add) {
+      unlockAudio();
+      let input = document.getElementById('customChaalInput');
+      input.value = (parseInt(input.value) || 0) + add;
+    }
+
+    function submitChaal() {
+      sendAction('CHAAL', parseInt(document.getElementById('customChaalInput').value));
+    }
+
+    function submitBand() {
+      sendAction('BAND', parseInt(document.getElementById('customChaalInput').value));
+    }
+
+    function submitCounter() {
+      sendAction('COUNTER', parseInt(document.getElementById('customChaalInput').value));
+    }
+
+    function triggerShow() {
+      if (!canShowGlobally) return showToast('Dono players Seen hone chahiye!');
+      sendAction('SHOW');
+    }
+
+    function sendAction(type, amount) {
+      unlockAudio();
+      playBeep(450, 0.08);
+      socket.emit('action', { roomId: currentRoomId, phone: currentUser.phone, type, amount });
+    }
+
+    function openAddChips() {
+      document.getElementById('addChipsModal').style.display = 'flex';
+    }
+
+    function confirmAddChips() {
+      let amt = parseInt(document.getElementById('chipsToAddInput').value.trim());
+      if (!amt || amt <= 0) return showToast('Sahi amount dalein!');
+      socket.emit('addCustomChips', { roomId: currentRoomId, phone: currentUser.phone, amount: amt });
+      document.getElementById('addChipsModal').style.display = 'none';
+    }
+
+    socket.on('chipsUpdated', ({ chips }) => {
+      document.getElementById('myWalletChips').innerText = chips;
+      showToast(`Wallet update: ₹${chips}`);
+    });
+
+    socket.on('enhancedWinner', ({ winnerName, pot, showData }) => {
+      playBeep(523, 0.15);
+      document.getElementById('winCardName').innerText = winnerName;
+      document.getElementById('winCardAmount').innerText = `+₹${pot}`;
+
+      let detailsHtml = '';
+      if (showData) {
+        detailsHtml = `
+          <div style="background:rgba(0,0,0,0.4); padding:6px; border-radius:8px; margin-top:6px;">
+            <b>${showData.p1.name}</b>: ${showData.p1.cards.map(c=>c.rank+c.suit).join(' ')}<br>
+            <b>${showData.p2.name}</b>: ${showData.p2.cards.map(c=>c.rank+c.suit).join(' ')}
+          </div>
+        `;
+      }
+      document.getElementById('winCardDetails').innerHTML = detailsHtml;
+
+      const overlay = document.getElementById('winnerOverlay');
+      overlay.style.display = 'flex';
+      setTimeout(() => { overlay.style.display = 'none'; }, 4500);
+    });
+
+    socket.on('errorMsg', (msg) => showToast(msg));
+    socket.on('timerUpdate', ({ timeLeft }) => {
+      document.getElementById('timerDisplay').innerText = `⏳ ${timeLeft}s`;
+    });
+  </script>
+</body>
+</html>

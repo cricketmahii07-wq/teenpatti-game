@@ -9,12 +9,12 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
     body { background: #020704; color: #fff; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    /* Modals */
+    /* Modals & Overlays */
     .overlay { position: fixed; inset: 0; background: rgba(2, 6, 3, 0.96); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; }
-    .card-modal { background: #06170d; border: 2px solid #ffd700; border-radius: 16px; padding: 20px; width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; align-items: center; box-shadow: 0 0 25px rgba(255, 215, 0, 0.25); }
-    input, select { padding: 12px; border-radius: 8px; border: 1px solid #1e5230; background: #030804; color: #fff; width: 100%; text-align: center; font-size: 16px; font-weight: bold; }
+    .card-modal { background: #06170d; border: 2px solid #ffd700; border-radius: 16px; padding: 20px; width: 100%; max-width: 330px; display: flex; flex-direction: column; gap: 12px; align-items: center; box-shadow: 0 0 25px rgba(255, 215, 0, 0.25); }
+    input, select { padding: 12px; border-radius: 8px; border: 1px solid #1e5230; background: #030804; color: #fff; width: 100%; text-align: center; font-size: 15px; font-weight: bold; }
     input:focus, select:focus { border-color: #ffd700; outline: none; }
-    .action-btn { padding: 12px; border: none; border-radius: 8px; background: linear-gradient(180deg, #ffd700, #b8860b); color: #000; font-weight: bold; cursor: pointer; width: 100%; font-size: 15px; box-shadow: 0 3px 6px rgba(0,0,0,0.4); }
+    .action-btn { padding: 11px; border: none; border-radius: 8px; background: linear-gradient(180deg, #ffd700, #b8860b); color: #000; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; box-shadow: 0 3px 6px rgba(0,0,0,0.4); }
 
     /* Top Navigation */
     .top { padding: 8px 12px; background: #020503; display: flex; justify-content: space-between; align-items: center; z-index: 10; border-bottom: 2px solid #143d22; }
@@ -22,41 +22,14 @@
     .btn-add-chips { background: #ffd700; color: #000; font-weight: bold; border: none; border-radius: 12px; padding: 2px 8px; font-size: 10px; cursor: pointer; }
     .timer-badge { background: #d32f2f; color: #fff; padding: 3px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; }
 
-    /* Live Action Feed Banner */
+    /* Live Action Feed */
     .move-banner {
-      background: rgba(0,0,0,0.75); border: 1px solid #ffd700; color: #ffd700;
-      padding: 6px 14px; font-size: 12px; font-weight: bold; text-align: center;
-      margin: 4px 10px 0 10px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.8); border: 1px solid #ffd700; color: #ffd700;
+      padding: 6px 14px; font-size: 11px; font-weight: bold; text-align: center;
+      margin: 4px 10px 0 10px; border-radius: 12px;
     }
 
-    /* Round Start Banner */
-    #roundStartBanner {
-      position: fixed; top: 20%; left: 50%; transform: translate(-50%, -50%);
-      background: linear-gradient(90deg, #b8860b, #ffd700, #b8860b);
-      color: #000; font-weight: 900; font-size: 16px; padding: 12px 28px;
-      border-radius: 30px; box-shadow: 0 0 25px #ffd700; z-index: 90;
-      display: none; animation: popIn 0.3s ease-out;
-    }
-    @keyframes popIn {
-      0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-    }
-
-    /* Winner Overlay */
-    #winnerOverlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 95;
-      display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
-    }
-    .winner-card {
-      background: radial-gradient(circle, #1a4d26, #061c0e); border: 3px solid #ffd700;
-      border-radius: 20px; padding: 24px; text-align: center; width: 85%; max-width: 340px;
-      box-shadow: 0 0 35px rgba(255, 215, 0, 0.5); animation: popIn 0.4s ease;
-    }
-    .winner-trophy { font-size: 40px; }
-    .winner-title { font-size: 22px; font-weight: bold; color: #ffd700; margin: 4px 0; }
-    .winner-amount { font-size: 26px; font-weight: 900; color: #00e676; margin-bottom: 8px; }
-
-    /* 3D Casino Table */
+    /* 3D Gold Chip Pot Design & Animation */
     .table-box { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; margin-bottom: 235px; }
     .oval-table { 
       width: 95%; max-width: 480px; height: 380px; 
@@ -68,11 +41,12 @@
 
     .pot-center { 
       position: absolute; top: 44%; left: 50%; transform: translate(-50%, -50%); 
-      background: rgba(0,0,0,0.88); border: 2px solid #ffd700; padding: 8px 20px; 
-      border-radius: 30px; text-align: center; z-index: 5; box-shadow: 0 0 15px rgba(255,215,0,0.4); 
+      background: radial-gradient(circle, #2d1e08, #0a0602); border: 2px solid #ffd700; padding: 10px 22px; 
+      border-radius: 35px; text-align: center; z-index: 5; box-shadow: 0 0 20px rgba(255,215,0,0.5); 
     }
+    .chips-stack-icon { font-size: 20px; display: block; margin-bottom: 2px; }
 
-    /* Opponent Seats */
+    /* Seats */
     .seat { position: absolute; width: 95px; text-align: center; transition: all 0.2s; }
     .seat.active .p-box { border-color: #ffd700; box-shadow: 0 0 16px #ffd700; transform: scale(1.05); }
     .seat.waiting .p-box { opacity: 0.5; border-color: #777; }
@@ -81,10 +55,10 @@
 
     .mini-cards { display: flex; justify-content: center; gap: 2px; margin-top: 4px; }
     .mini-card { width: 22px; height: 32px; background: #fff; color: #000; border-radius: 3px; font-weight: bold; font-size: 10px; display: flex; align-items: center; justify-content: center; }
-    .mini-card.back { background: repeating-linear-gradient(45deg, #1565c0, #1565c0 3px, #0d47a1 3px, #0d47a1 6px); color: #fff; }
+    .mini-card.back { background: #880e4f; color: #ffd700; font-size: 8px; font-weight: 900; }
     .mini-card.red { color: #d32f2f; }
 
-    /* Big Player Hand */
+    /* Big Player Hand with ADDI Branding on Card Back */
     .my-hand-container {
       position: fixed; bottom: 135px; left: 0; right: 0;
       display: flex; justify-content: center; align-items: center; gap: 12px;
@@ -98,10 +72,11 @@
     }
     .big-card.red { color: #d32f2f; }
     .big-card.card-back {
-      background: repeating-linear-gradient(45deg, #b71c1c, #b71c1c 5px, #880e4f 5px, #880e4f 10px);
-      border: 2px solid #fff; display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(circle, #b71c1c, #4a0007);
+      border: 2px solid #ffd700; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
     }
-    .big-card.card-back::after { content: '♠'; color: rgba(255,255,255,0.7); font-size: 32px; }
+    .addi-logo { color: #ffd700; font-weight: 900; font-size: 14px; letter-spacing: 2px; transform: rotate(-15deg); text-shadow: 0 2px 4px #000; border: 1.5px solid #ffd700; padding: 3px 6px; border-radius: 6px; }
 
     /* Bottom Action Controls */
     .bottom-bar { 
@@ -114,96 +89,152 @@
     .custom-chaal-row input { width: 95px; padding: 7px; font-size: 14px; text-align: center; }
     .chip-btn { padding: 7px 11px; border: 1px solid #ffd700; background: #13381e; color: #ffd700; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; }
 
-    .btn-row { display: flex; gap: 6px; justify-content: center; }
-    .btn { flex: 1; padding: 11px 0; border: none; border-radius: 7px; font-weight: bold; cursor: pointer; color: #fff; font-size: 11px; text-transform: uppercase; }
+    .btn-row { display: flex; gap: 5px; justify-content: center; }
+    .btn { flex: 1; padding: 10px 0; border: none; border-radius: 7px; font-weight: bold; cursor: pointer; color: #fff; font-size: 10px; text-transform: uppercase; }
     .btn-see { background: linear-gradient(180deg, #29b6f6, #0288d1); }
     .btn-band { background: linear-gradient(180deg, #ab47bc, #7b1fa2); }
     .btn-counter { background: linear-gradient(180deg, #ff4081, #c2185b); }
+    .btn-sideshow { background: linear-gradient(180deg, #ffd700, #b8860b); color: #000; }
     .btn-chaal { background: linear-gradient(180deg, #ffa726, #f57c00); font-size: 12px; }
     .btn-show { background: linear-gradient(180deg, #26a69a, #00796b); }
     .btn-pack { background: linear-gradient(180deg, #78909c, #455a64); }
     .btn:disabled { opacity: 0.22; cursor: not-allowed; }
 
-    .waiting-bar { font-size: 12px; color: #ffd700; text-align: center; font-weight: bold; padding: 4px; }
+    /* In-Game Live Chat Drawer */
+    #chatDrawer { position: fixed; bottom: 155px; right: 10px; width: 230px; height: 180px; background: rgba(3,10,5,0.92); border: 1.5px solid #ffd700; border-radius: 12px; display: none; flex-direction: column; z-index: 80; }
+    #chatMessages { flex: 1; overflow-y: auto; padding: 6px; font-size: 11px; display: flex; flex-direction: column; gap: 4px; }
+    .chat-msg { background: rgba(255,255,255,0.08); padding: 3px 6px; border-radius: 6px; }
   </style>
 </head>
 <body onclick="unlockAudio()">
 
-  <!-- STEP 1: Phone -->
+  <!-- STEP 1: Phone Login -->
   <div id="phoneOverlay" class="overlay">
     <div class="card-modal">
       <h2 style="color:#ffd700;">♠ REGISTER / LOGIN</h2>
-      <p style="font-size:12px; color:#aaa; text-align:center;">10-digit mobile number dalein:</p>
-      <input type="tel" id="userPhone" placeholder="Mobile Number" maxlength="10">
+      <input type="tel" id="userPhone" placeholder="10 Digit Mobile Number" maxlength="10">
       <input type="text" id="userName" placeholder="Your Name">
       <button class="action-btn" onclick="sendOtpRequest()">GET OTP</button>
     </div>
   </div>
 
-  <!-- STEP 2: OTP -->
+  <!-- STEP 2: OTP Verification -->
   <div id="otpOverlay" class="overlay" style="display:none;">
     <div class="card-modal">
       <h2 style="color:#ffd700;">ENTER OTP</h2>
-      <p style="font-size:12px; color:#aaa; text-align:center;">Code dalein (Demo: 1234):</p>
+      <p style="font-size:12px; color:#aaa;">Code dalein (Demo: 1234):</p>
       <input type="number" id="otpInput" placeholder="4-Digit OTP" maxlength="4">
       <button class="action-btn" onclick="verifyOtpCode()">VERIFY & PLAY</button>
-      <button class="action-btn" style="background:#444; color:#fff;" onclick="backToPhone()">CHANGE NUMBER</button>
+      <button class="action-btn" style="background:#444; color:#fff;" onclick="backToPhone()">BACK</button>
     </div>
   </div>
 
-  <!-- Mode Selection -->
+  <!-- Main Menu / Lobby -->
   <div id="lobbyOverlay" class="overlay" style="display:none;">
     <div class="card-modal">
-      <h2 style="color:#ffd700;">SELECT MODE</h2>
-      <div id="userStats" style="font-size:12px; text-align:center; line-height:1.5;"></div>
+      <h2 style="color:#ffd700;">MAIN LOBBY</h2>
+      <div id="userStats" style="font-size:12px; text-align:center;"></div>
       
-      <div style="width:100%; border-top:1px solid #222; padding-top:10px;">
-        <input type="text" id="roomCodeInput" placeholder="Room Code (e.g. 1001)">
-        <button class="action-btn" style="margin-top:6px;" onclick="enterRoom()">PLAY WITH FRIENDS</button>
-      </div>
+      <button class="action-btn" onclick="openFriendsSubMenu()">👥 PLAY WITH FRIENDS</button>
+      <button class="action-btn" style="background:linear-gradient(180deg,#00e676,#00897b);" onclick="openBotSubMenu()">🤖 PLAY WITH BOTS</button>
+      <button class="action-btn" style="background:#13381e; color:#ffd700; border:1px solid #ffd700;" onclick="openHowToPlay()">📖 HOW TO PLAY</button>
+    </div>
+  </div>
 
-      <div style="color:#888; font-size:12px; font-weight:bold;">--- OR ---</div>
+  <!-- Friends Submenu (Host vs Join) -->
+  <div id="friendsMenuModal" class="overlay" style="display:none;">
+    <div class="card-modal">
+      <h3 style="color:#ffd700;">PLAY WITH FRIENDS</h3>
+      <select id="friendsTableMode">
+        <option value="unlimited">Unlimited Table (Open Chaal)</option>
+        <option value="limited">Limited Table (Chaal: ₹120, Pot: ₹1500)</option>
+      </select>
+      <button class="action-btn" onclick="hostRoomAction()">🏠 HOST ROOM (Get Code)</button>
+      
+      <div style="width:100%; border-top:1px solid #222; margin: 4px 0;"></div>
+      <input type="text" id="joinRoomCode" placeholder="Enter 4-Digit Room Code">
+      <button class="action-btn" onclick="joinRoomAction()">🚪 JOIN ROOM</button>
+      <button class="action-btn" style="background:#444; color:#fff;" onclick="backToLobby()">CANCEL</button>
+    </div>
+  </div>
 
-      <div style="width:100%;">
-        <select id="botCountSelect">
-          <option value="1">1 Bot (1 vs 1)</option>
-          <option value="2">2 Bots (3 Players)</option>
-          <option value="3" selected>3 Bots (4 Players)</option>
-          <option value="4">4 Bots (5 Players)</option>
-        </select>
-        <button class="action-btn" style="background:linear-gradient(180deg,#00e676,#00897b); margin-top:6px;" onclick="startBotGame()">PLAY WITH BOTS</button>
-      </div>
+  <!-- Bot Submenu (Bot count, difficulty, mode) -->
+  <div id="botMenuModal" class="overlay" style="display:none;">
+    <div class="card-modal">
+      <h3 style="color:#ffd700;">BOT MATCH SETTINGS</h3>
+      <label style="font-size:11px; color:#aaa; align-self:flex-start;">Bots Count:</label>
+      <select id="botCountSelect">
+        <option value="1">1 Bot (1 vs 1)</option>
+        <option value="2">2 Bots (3 Players)</option>
+        <option value="3" selected>3 Bots (4 Players)</option>
+        <option value="4">4 Bots (5 Players)</option>
+      </select>
+
+      <label style="font-size:11px; color:#aaa; align-self:flex-start;">AI Difficulty:</label>
+      <select id="botDifficultySelect">
+        <option value="easy">Easy (Simple & Direct)</option>
+        <option value="medium" selected>Medium (Balanced)</option>
+        <option value="hard">Hard (Bluff Master & Aggressive)</option>
+      </select>
+
+      <label style="font-size:11px; color:#aaa; align-self:flex-start;">Table Mode:</label>
+      <select id="botTableModeSelect">
+        <option value="limited" selected>Limited (Chaal: ₹120, Pot: ₹1500)</option>
+        <option value="unlimited">Unlimited (No Limit)</option>
+      </select>
+
+      <button class="action-btn" onclick="startBotMatch()">START GAME</button>
+      <button class="action-btn" style="background:#444; color:#fff;" onclick="backToLobby()">CANCEL</button>
+    </div>
+  </div>
+
+  <!-- How to Play Modal -->
+  <div id="howToPlayModal" class="overlay" style="display:none;">
+    <div class="card-modal" style="max-height:85vh; overflow-y:auto; text-align:left; font-size:12px; line-height:1.5;">
+      <h3 style="color:#ffd700; text-align:center;">♠ HOW TO PLAY</h3>
+      <b style="color:#ffd700;">1. Card Scoring:</b><br>
+      • K, Q, J = 0 points. A = 1, Numbers 2-10 = Face value.<br>
+      • Total score = 3 cards sum ka <b>Unit Digit</b> (jaise 8+7+4 = 19 -> <b>9 Points</b>).<br>
+      • <b>Trio (Highest):</b> KKK > QQQ > JJJ.<br><br>
+
+      <b style="color:#ffd700;">2. Custom Rules:</b><br>
+      • <b>Band Limit:</b> Har player round me maximum <b>4 Band</b> chal sakta hai; 4 Band ke baad cards automatically SEEN ho jayenge.<br>
+      • <b>Blind Player:</b> Normal Chaal nahi chal sakta; sirf Band ya Counter karega ya Cards dekhega.<br>
+      • <b>Side Show:</b> SEEN player pichhle SEEN player se request karega.<br><br>
+
+      <b style="color:#ffd700;">3. Table Modes:</b><br>
+      • <b>Limited:</b> Max chaal ₹120 aur Pot ₹1500 poora hote hi Auto-Show.<br>
+      • <b>Unlimited:</b> No capping.<br>
+      <button class="action-btn" style="margin-top:10px;" onclick="document.getElementById('howToPlayModal').style.display='none'">CLOSE</button>
+    </div>
+  </div>
+
+  <!-- Side Show Incoming Prompt -->
+  <div id="sideShowModal" class="overlay" style="display:none;">
+    <div class="card-modal">
+      <h3 style="color:#ffd700;">🤝 SIDE SHOW REQUEST</h3>
+      <p id="sideShowText" style="font-size:13px; text-align:center;"></p>
+      <button class="action-btn" style="background:#00e676; color:#000;" onclick="answerSideShow(true)">ACCEPT</button>
+      <button class="action-btn" style="background:#d32f2f; color:#fff;" onclick="answerSideShow(false)">REJECT</button>
     </div>
   </div>
 
   <!-- Add Chips Modal -->
   <div id="addChipsModal" class="overlay" style="display:none;">
     <div class="card-modal">
-      <h2 style="color:#ffd700;">💰 ADD POINTS</h2>
-      <p style="font-size:12px; color:#ccc; text-align:center;">Timer 120s freeze ho gaya hai.</p>
-      <input type="number" id="chipsToAddInput" placeholder="Points amount (e.g. 100)">
+      <h3 style="color:#ffd700;">💰 ADD POINTS</h3>
+      <input type="number" id="chipsToAddInput" placeholder="Amount (e.g. 100)">
       <button class="action-btn" onclick="confirmAddChips()">ADD POINTS</button>
-      <button class="action-btn" style="background:#444; color:#fff;" onclick="closeAddChipsModal()">CANCEL</button>
+      <button class="action-btn" style="background:#444; color:#fff;" onclick="document.getElementById('addChipsModal').style.display='none'">CANCEL</button>
     </div>
   </div>
-
-  <!-- Logs Modal -->
-  <div id="historyModal" class="overlay" style="display:none;">
-    <div class="card-modal" style="max-height: 80vh; overflow-y: auto; width: 90%; max-width: 360px;">
-      <h3 style="color:#ffd700;">📜 POINTS & ROUND LOGS</h3>
-      <div id="historyContent" style="font-size:12px; text-align:left; width:100%; margin-top:8px;"></div>
-      <button class="action-btn" style="background:#444; color:#fff; padding:8px; margin-top:10px;" onclick="document.getElementById('historyModal').style.display='none'">CLOSE</button>
-    </div>
-  </div>
-
-  <div id="roundStartBanner">🔔 ROUND STARTED! Boot ₹1</div>
 
   <!-- Winner Modal -->
-  <div id="winnerOverlay">
-    <div class="winner-card">
-      <div class="winner-trophy">🏆</div>
-      <div class="winner-title" id="winCardName">Winner Name</div>
-      <div class="winner-amount" id="winCardAmount">₹0</div>
+  <div id="winnerOverlay" class="overlay" style="display:none;">
+    <div class="card-modal" style="border: 3px solid #ffd700; text-align:center;">
+      <div style="font-size:36px;">🏆</div>
+      <h2 id="winCardName" style="color:#ffd700;">-</h2>
+      <h1 id="winCardAmount" style="color:#00e676;">₹0</h1>
       <div id="winCardDetails" style="font-size:12px; color:#ddd; margin-top:6px;"></div>
     </div>
   </div>
@@ -212,7 +243,7 @@
   <div class="top">
     <div>
       Room: <b id="displayRoomId" style="color:#ffd700;">-</b>
-      <button onclick="openHistory()" style="background:#13381e; border:1px solid #ffd700; color:#ffd700; border-radius:8px; padding:2px 8px; cursor:pointer; font-size:11px; margin-left:6px; font-weight:bold;">📜 LOGS</button>
+      <button onclick="toggleChat()" style="background:#13381e; border:1px solid #ffd700; color:#ffd700; border-radius:8px; padding:2px 8px; cursor:pointer; font-size:11px; margin-left:6px; font-weight:bold;">💬 CHAT</button>
     </div>
     <div class="profile-badge">
       <span id="profileName">User</span> | <b>₹<span id="myWalletChips">500</span></b>
@@ -221,25 +252,24 @@
     <div id="timerDisplay" class="timer-badge">⏳ 30s</div>
   </div>
 
-  <!-- Real-time Move Feed Banner -->
   <div class="move-banner" id="lastMoveBanner">Game Ready...</div>
 
-  <!-- Oval Poker Table -->
+  <!-- 3D Casino Table -->
   <div class="table-box">
     <div class="oval-table" id="tableSeats">
       <div class="pot-center">
+        <span class="chips-stack-icon">🪙🪙</span>
         <div style="color:#ffd700; font-size:18px; font-weight:bold;">₹<span id="potAmount">0</span></div>
-        <div style="font-size:10px; color:#aaa;">Next Bet: ₹<span id="betAmount">1</span></div>
+        <div style="font-size:10px; color:#aaa;">Bet: ₹<span id="betAmount">1</span></div>
       </div>
     </div>
   </div>
 
+  <!-- Big Player Cards Hand -->
   <div class="my-hand-container" id="myBigCards"></div>
 
-  <!-- Action Controls -->
+  <!-- Bottom Panel Controls -->
   <div class="bottom-bar">
-    <div id="waitingMsg" class="waiting-bar" style="display:none;">⏳ Waiting for another player to join...</div>
-    
     <div class="custom-chaal-row">
       <button class="chip-btn" onclick="adjustChaal(1)">+1</button>
       <button class="chip-btn" onclick="adjustChaal(5)">+5</button>
@@ -249,11 +279,25 @@
     </div>
 
     <div class="btn-row">
-      <button class="btn btn-see" id="btnSee" onclick="sendAction('SEE')">SEE CARDS</button>
+      <button class="btn btn-see" id="btnSee" onclick="sendAction('SEE')">SEE</button>
       <button class="btn btn-band" id="btnBand" onclick="submitBand()">BAND</button>
       <button class="btn btn-counter" id="btnCounter" onclick="submitCounter()">COUNTER</button>
+      <button class="btn btn-sideshow" id="btnSideShow" onclick="requestSideShowAction()">SIDE SHOW</button>
       <button class="btn btn-show" id="btnShow" onclick="triggerShow()">SHOW</button>
       <button class="btn btn-pack" id="btnPack" onclick="sendAction('PACK')">PACK</button>
+    </div>
+  </div>
+
+  <!-- Live Public Chat Drawer -->
+  <div id="chatDrawer">
+    <div style="padding:4px 8px; background:#020503; font-weight:bold; font-size:11px; color:#ffd700; display:flex; justify-content:space-between;">
+      <span>Table Chat</span>
+      <span onclick="toggleChat()" style="cursor:pointer;">✖</span>
+    </div>
+    <div id="chatMessages"></div>
+    <div style="display:flex; padding:4px; gap:4px;">
+      <input type="text" id="chatInput" placeholder="Type..." style="padding:4px; font-size:11px; flex:1;">
+      <button onclick="sendChat()" style="background:#ffd700; border:none; padding:4px 8px; border-radius:4px; font-weight:bold; cursor:pointer;">Send</button>
     </div>
   </div>
 
@@ -262,7 +306,7 @@
     let currentRoomId = null;
     let currentUser = null;
     let canShowGlobally = false;
-    let latestHistory = [];
+    let pendingSideShowCaller = null;
 
     let audioCtx = null;
     function unlockAudio() {
@@ -308,7 +352,7 @@
     }
 
     socket.on('otpSent', ({ phone, otp }) => {
-      alert(`📩 OTP for ${phone}: [ ${otp} ] (Testing Code: 1234)`);
+      alert(`📩 OTP for ${phone}: [ ${otp} ] (Testing: 1234)`);
       document.getElementById('phoneOverlay').style.display = 'none';
       document.getElementById('otpOverlay').style.display = 'flex';
     });
@@ -324,282 +368,4 @@
       const name = document.getElementById('userName').value.trim();
       const otp = document.getElementById('otpInput').value.trim();
       if (!otp) return alert('OTP enter karein!');
-      socket.emit('verifyOtp', { phone, otp, name });
-    }
-
-    socket.on('authError', (msg) => alert(msg));
-
-    socket.on('authSuccess', (userData) => {
-      currentUser = userData;
-      localStorage.setItem('tp_phone', userData.phone);
-      localStorage.setItem('tp_name', userData.name);
-
-      document.getElementById('phoneOverlay').style.display = 'none';
-      document.getElementById('otpOverlay').style.display = 'none';
-      document.getElementById('lobbyOverlay').style.display = 'flex';
-
-      document.getElementById('profileName').innerText = userData.name;
-      document.getElementById('myWalletChips').innerText = userData.chips;
-
-      let winRate = userData.gamesPlayed ? Math.round((userData.gamesWon / userData.gamesPlayed) * 100) : 0;
-      document.getElementById('userStats').innerHTML = `
-        <b style="color:#ffd700; font-size:15px;">${userData.name}</b> (${userData.phone})<br>
-        💰 Wallet: <b>₹${userData.chips}</b> | 🎮 Games: <b>${userData.gamesPlayed}</b> (Won: ${userData.gamesWon})
-      `;
-
-      let savedRoom = localStorage.getItem('tp_room');
-      if (savedRoom) document.getElementById('roomCodeInput').value = savedRoom;
-    });
-
-    function enterRoom() {
-      unlockAudio();
-      const roomId = document.getElementById('roomCodeInput').value.trim();
-      if (!roomId) return alert('Room Code dalein!');
-      localStorage.setItem('tp_room', roomId);
-      currentRoomId = roomId;
-      socket.emit('joinOrCreateRoom', { roomId, phone: currentUser.phone });
-    }
-
-    function startBotGame() {
-      unlockAudio();
-      const botCount = document.getElementById('botCountSelect').value;
-      socket.emit('createBotRoom', { phone: currentUser.phone, botCount });
-    }
-
-    socket.on('roundStarted', ({ roundNumber }) => {
-      playBeep(880, 0.25);
-      triggerVibrate([80, 40, 80]);
-      const banner = document.getElementById('roundStartBanner');
-      banner.innerText = `🔔 ROUND #${roundNumber} STARTED! Boot ₹1`;
-      banner.style.display = 'block';
-      setTimeout(() => { banner.style.display = 'none'; }, 2500);
-    });
-
-    socket.on('enhancedWinner', ({ winnerName, pot, showData }) => {
-      playBeep(523, 0.15);
-      setTimeout(() => playBeep(659, 0.2), 150);
-      setTimeout(() => playBeep(784, 0.35), 350);
-      triggerVibrate([100, 50, 100, 50, 200]);
-
-      document.getElementById('winCardName').innerText = winnerName;
-      document.getElementById('winCardAmount').innerText = `+₹${pot}`;
-
-      let detailsHtml = '';
-      if (showData) {
-        detailsHtml = `
-          <div style="background:rgba(0,0,0,0.4); padding:6px; border-radius:8px; margin-top:6px;">
-            <b>${showData.p1.name}</b>: ${showData.p1.cards.map(c=>c.rank+c.suit).join(' ')} (Score: ${showData.p1.score})<br>
-            <b>${showData.p2.name}</b>: ${showData.p2.cards.map(c=>c.rank+c.suit).join(' ')} (Score: ${showData.p2.score})
-          </div>
-        `;
-      }
-      document.getElementById('winCardDetails').innerHTML = detailsHtml;
-
-      const overlay = document.getElementById('winnerOverlay');
-      overlay.style.display = 'flex';
-      setTimeout(() => { overlay.style.display = 'none'; }, 5000);
-    });
-
-    socket.on('kicked', (msg) => {
-      alert(msg);
-      location.reload();
-    });
-
-    socket.on('errorMsg', (msg) => alert(msg));
-    socket.on('playerMessage', (msg) => alert(msg));
-    socket.on('timerUpdate', ({ timeLeft }) => {
-      document.getElementById('timerDisplay').innerText = `⏳ ${timeLeft}s`;
-      if (timeLeft <= 5) playBeep(320, 0.08);
-    });
-
-    socket.on('gameState', (state) => {
-      currentRoomId = state.roomId;
-      canShowGlobally = state.canShow;
-      latestHistory = state.history || [];
-      document.getElementById('displayRoomId').innerText = state.roomId;
-      document.getElementById('lobbyOverlay').style.display = 'none';
-      document.getElementById('potAmount').innerText = state.pot;
-      document.getElementById('betAmount').innerText = state.currentBet;
-
-      // Update Live Move Banner
-      if (state.lastMoveAnnouncement) {
-        document.getElementById('lastMoveBanner').innerText = state.lastMoveAnnouncement;
-      }
-
-      let chaalInput = document.getElementById('customChaalInput');
-      if (!chaalInput.value || parseInt(chaalInput.value) < state.currentBet) {
-        chaalInput.value = state.currentBet;
-      }
-
-      let activeP = state.players[state.activeIdx];
-      let you = state.players.find(p => p.isYou);
-      if (you) document.getElementById('myWalletChips').innerText = you.chips;
-
-      let isSinglePlayer = state.totalPlayers < 2 || !state.isRoundActive;
-      document.getElementById('waitingMsg').style.display = isSinglePlayer ? 'block' : 'none';
-
-      let isYourTurn = !isSinglePlayer && you && activeP && activeP.id === you.id && !you.isWaiting;
-
-      if (isYourTurn) {
-        triggerVibrate([70]);
-        playBeep(700, 0.15);
-      }
-
-      document.getElementById('btnSee').disabled = isSinglePlayer || !(isYourTurn && you.state === 'blind');
-      document.getElementById('btnBand').disabled = isSinglePlayer || !(isYourTurn && you.state === 'blind');
-      document.getElementById('btnCounter').disabled = isSinglePlayer || !(isYourTurn && you.state === 'blind' && state.lastMoveWasSeen);
-      document.getElementById('btnChaal').disabled = isSinglePlayer || !isYourTurn;
-      document.getElementById('btnPack').disabled = isSinglePlayer || !isYourTurn;
-      document.getElementById('btnShow').disabled = isSinglePlayer || !(isYourTurn && state.canShow);
-
-      renderTable(state.players, state.activeIdx);
-      renderMyBigCards(you, isSinglePlayer);
-    });
-
-    function triggerShow() {
-      if (!canShowGlobally) return alert('Show tabhi hoga jab aakhiri dono players Seen hon!');
-      sendAction('SHOW');
-    }
-
-    function renderMyBigCards(you, isSingle) {
-      const container = document.getElementById('myBigCards');
-      if (!you || you.folded || you.isWaiting || isSingle) {
-        container.innerHTML = you?.isWaiting 
-          ? `<div style="background:rgba(0,0,0,0.7); border:1px solid #ffd700; padding:6px 14px; border-radius:15px; font-weight:bold; color:#ffd700;">⏳ Agle Round ke liye Wait karein</div>` 
-          : '';
-        return;
-      }
-
-      if (you.state === 'seen' && you.cards) {
-        container.innerHTML = you.cards.map(c => {
-          let isRed = c.suit === '♥' || c.suit === '♦';
-          return `
-            <div class="big-card ${isRed ? 'red':''}">
-              <div>${c.rank}</div>
-              <div style="font-size:26px; text-align:center;">${c.suit}</div>
-              <div style="font-size:12px; text-align:right;">${c.rank}</div>
-            </div>`;
-        }).join('');
-      } else {
-        container.innerHTML = `
-          <div class="big-card card-back"></div>
-          <div class="big-card card-back"></div>
-          <div class="big-card card-back"></div>
-        `;
-      }
-    }
-
-    function renderTable(players, activeIdx) {
-      const container = document.getElementById('tableSeats');
-      container.querySelectorAll('.seat').forEach(e => e.remove());
-
-      const others = players.filter(p => !p.isYou);
-      const total = others.length;
-
-      others.forEach((p, i) => {
-        const angle = (i / total) * Math.PI + Math.PI;
-        const rx = 145, ry = 135;
-        const x = 180 + rx * Math.cos(angle);
-        const y = 145 + ry * Math.sin(angle);
-
-        let cardHtml = p.cards 
-          ? p.cards.map(c => `<div class="mini-card ${c.suit==='♥'||c.suit==='♦'?'red':''}">${c.rank}${c.suit}</div>`).join('')
-          : `<div class="mini-card back">🂠</div><div class="mini-card back">🂠</div><div class="mini-card back">🂠</div>`;
-
-        let addedBadge = p.addedPointsThisRound > 0 ? `<div class="added-badge">+₹${p.addedPointsThisRound} Added</div>` : '';
-
-        const seatDiv = document.createElement('div');
-        seatDiv.className = `seat ${players[activeIdx]?.phone === p.phone ? 'active' : ''} ${p.isWaiting ? 'waiting' : ''}`;
-        seatDiv.style.left = `${x}px`;
-        seatDiv.style.top = `${y}px`;
-        seatDiv.innerHTML = `
-          <div class="p-box">
-            <b>${p.name}</b><br>
-            ₹${p.chips} | <span style="color:#ffd700;">${p.isWaiting ? 'WAIT' : (p.folded ? 'FOLD' : p.state.toUpperCase())}</span>
-            ${addedBadge}
-          </div>
-          <div class="mini-cards">${p.isWaiting ? '' : cardHtml}</div>
-        `;
-        container.appendChild(seatDiv);
-      });
-    }
-
-    function adjustChaal(add) {
-      unlockAudio();
-      let input = document.getElementById('customChaalInput');
-      input.value = (parseInt(input.value) || 0) + add;
-    }
-
-    function submitChaal() {
-      sendAction('CHAAL', parseInt(document.getElementById('customChaalInput').value));
-    }
-
-    function submitBand() {
-      sendAction('BAND', parseInt(document.getElementById('customChaalInput').value));
-    }
-
-    function submitCounter() {
-      sendAction('COUNTER', parseInt(document.getElementById('customChaalInput').value));
-    }
-
-    function sendAction(type, amount) {
-      unlockAudio();
-      playBeep(450, 0.08);
-      triggerVibrate([40]);
-      socket.emit('action', { roomId: currentRoomId, phone: currentUser.phone, type, amount });
-    }
-
-    function openAddChips() {
-      unlockAudio();
-      socket.emit('requestAddChips', { roomId: currentRoomId, phone: currentUser.phone });
-      document.getElementById('addChipsModal').style.display = 'flex';
-    }
-
-    function closeAddChipsModal() {
-      document.getElementById('addChipsModal').style.display = 'none';
-    }
-
-    function confirmAddChips() {
-      let val = document.getElementById('chipsToAddInput').value.trim();
-      let amt = parseInt(val);
-      if (!amt || amt <= 0) return alert('Sahi amount dalein!');
-      socket.emit('addCustomChips', { roomId: currentRoomId, phone: currentUser.phone, amount: amt });
-      closeAddChipsModal();
-    }
-
-    socket.on('chipsUpdated', ({ chips }) => {
-      document.getElementById('myWalletChips').innerText = chips;
-      alert(`₹${chips} points wallet me successfully update ho gaye!`);
-    });
-
-    function openHistory() {
-      unlockAudio();
-      let html = '';
-      if (!latestHistory || latestHistory.length === 0) {
-        html = '<p style="color:#aaa; text-align:center;">Abhi koi round complete nahi hua.</p>';
-      } else {
-        latestHistory.forEach(h => {
-          let playersBreakdown = h.players.map(p => {
-            let addInfo = p.addedPoints > 0 ? ` <b style="color:#00e676;">(+₹${p.addedPoints} Add)</b>` : '';
-            return `<div style="padding-left:8px; color:#bbb;">• ${p.name}: ₹${p.chips}${addInfo}</div>`;
-          }).join('');
-
-          html += `
-            <div style="background:#020904; border:1px solid #1e5230; border-radius:8px; padding:8px; margin-bottom:8px;">
-              <div style="display:flex; justify-content:space-between; border-bottom:1px solid #222; padding-bottom:4px; margin-bottom:4px;">
-                <b style="color:#ffd700;">Round #${h.round}</b>
-                <span style="color:#888;">${h.time}</span>
-              </div>
-              <div>🏆 Winner: <b style="color:#00e676;">${h.winner}</b> won <b>₹${h.pot}</b></div>
-              <div style="margin-top:4px; font-size:11px; color:#ffd700;">Players & Added Points:</div>
-              ${playersBreakdown}
-            </div>
-          `;
-        });
-      }
-      document.getElementById('historyContent').innerHTML = html;
-      document.getElementById('historyModal').style.display = 'flex';
-    }
-  </script>
-</body>
-</html>
+      socket.emit('verifyOtp', {

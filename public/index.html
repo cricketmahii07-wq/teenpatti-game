@@ -14,7 +14,14 @@
     .card-modal { background: #06170d; border: 2px solid #ffd700; border-radius: 16px; padding: 20px; width: 100%; max-width: 330px; display: flex; flex-direction: column; gap: 12px; align-items: center; box-shadow: 0 0 25px rgba(255, 215, 0, 0.25); }
     input, select { padding: 12px; border-radius: 8px; border: 1px solid #1e5230; background: #030804; color: #fff; width: 100%; text-align: center; font-size: 15px; font-weight: bold; }
     input:focus, select:focus { border-color: #ffd700; outline: none; }
-    .action-btn { padding: 11px; border: none; border-radius: 8px; background: linear-gradient(180deg, #ffd700, #b8860b); color: #000; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; box-shadow: 0 3px 6px rgba(0,0,0,0.4); }
+    .action-btn { padding: 12px; border: none; border-radius: 8px; background: linear-gradient(180deg, #ffd700, #b8860b); color: #000; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; box-shadow: 0 3px 6px rgba(0,0,0,0.4); }
+
+    /* Toast Notification (No alert popup freeze) */
+    #toastMsg {
+      position: fixed; top: 15px; left: 50%; transform: translateX(-50%);
+      background: #d32f2f; color: #fff; padding: 8px 16px; border-radius: 20px;
+      font-size: 12px; font-weight: bold; z-index: 150; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.8);
+    }
 
     /* Top Navigation */
     .top { padding: 8px 12px; background: #020503; display: flex; justify-content: space-between; align-items: center; z-index: 10; border-bottom: 2px solid #143d22; }
@@ -22,14 +29,13 @@
     .btn-add-chips { background: #ffd700; color: #000; font-weight: bold; border: none; border-radius: 12px; padding: 2px 8px; font-size: 10px; cursor: pointer; }
     .timer-badge { background: #d32f2f; color: #fff; padding: 3px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; }
 
-    /* Live Action Feed */
     .move-banner {
       background: rgba(0,0,0,0.8); border: 1px solid #ffd700; color: #ffd700;
       padding: 6px 14px; font-size: 11px; font-weight: bold; text-align: center;
       margin: 4px 10px 0 10px; border-radius: 12px;
     }
 
-    /* 3D Gold Chip Pot Design & Animation */
+    /* 3D Casino Table */
     .table-box { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; margin-bottom: 235px; }
     .oval-table { 
       width: 95%; max-width: 480px; height: 380px; 
@@ -51,14 +57,13 @@
     .seat.active .p-box { border-color: #ffd700; box-shadow: 0 0 16px #ffd700; transform: scale(1.05); }
     .seat.waiting .p-box { opacity: 0.5; border-color: #777; }
     .p-box { background: rgba(0,0,0,0.85); border: 2px solid #333; border-radius: 10px; padding: 4px; font-size: 11px; }
-    .added-badge { background: #ffd700; color: #000; font-size: 9px; font-weight: 900; border-radius: 6px; padding: 1px 4px; margin-top: 2px; display: inline-block; }
 
     .mini-cards { display: flex; justify-content: center; gap: 2px; margin-top: 4px; }
     .mini-card { width: 22px; height: 32px; background: #fff; color: #000; border-radius: 3px; font-weight: bold; font-size: 10px; display: flex; align-items: center; justify-content: center; }
     .mini-card.back { background: #880e4f; color: #ffd700; font-size: 8px; font-weight: 900; }
     .mini-card.red { color: #d32f2f; }
 
-    /* Big Player Hand with ADDI Branding on Card Back */
+    /* Big Cards Hand with ADDI Branding */
     .my-hand-container {
       position: fixed; bottom: 135px; left: 0; right: 0;
       display: flex; justify-content: center; align-items: center; gap: 12px;
@@ -78,7 +83,7 @@
     }
     .addi-logo { color: #ffd700; font-weight: 900; font-size: 14px; letter-spacing: 2px; transform: rotate(-15deg); text-shadow: 0 2px 4px #000; border: 1.5px solid #ffd700; padding: 3px 6px; border-radius: 6px; }
 
-    /* Bottom Action Controls */
+    /* Bottom Action Panel */
     .bottom-bar { 
       position: fixed; bottom: 28px; left: 10px; right: 10px; 
       background: rgba(4, 14, 7, 0.98); padding: 10px 8px; border-radius: 16px;
@@ -100,7 +105,6 @@
     .btn-pack { background: linear-gradient(180deg, #78909c, #455a64); }
     .btn:disabled { opacity: 0.22; cursor: not-allowed; }
 
-    /* In-Game Live Chat Drawer */
     #chatDrawer { position: fixed; bottom: 155px; right: 10px; width: 230px; height: 180px; background: rgba(3,10,5,0.92); border: 1.5px solid #ffd700; border-radius: 12px; display: none; flex-direction: column; z-index: 80; }
     #chatMessages { flex: 1; overflow-y: auto; padding: 6px; font-size: 11px; display: flex; flex-direction: column; gap: 4px; }
     .chat-msg { background: rgba(255,255,255,0.08); padding: 3px 6px; border-radius: 6px; }
@@ -108,24 +112,15 @@
 </head>
 <body onclick="unlockAudio()">
 
-  <!-- STEP 1: Phone Login -->
+  <div id="toastMsg"></div>
+
+  <!-- STEP 1: Phone Login (Direct Instant Play) -->
   <div id="phoneOverlay" class="overlay">
     <div class="card-modal">
       <h2 style="color:#ffd700;">♠ REGISTER / LOGIN</h2>
-      <input type="tel" id="userPhone" placeholder="10 Digit Mobile Number" maxlength="10">
+      <input type="tel" id="userPhone" placeholder="Mobile Number (10 Digit)" maxlength="10">
       <input type="text" id="userName" placeholder="Your Name">
-      <button class="action-btn" onclick="sendOtpRequest()">GET OTP</button>
-    </div>
-  </div>
-
-  <!-- STEP 2: OTP Verification -->
-  <div id="otpOverlay" class="overlay" style="display:none;">
-    <div class="card-modal">
-      <h2 style="color:#ffd700;">ENTER OTP</h2>
-      <p style="font-size:12px; color:#aaa;">Code dalein (Demo: 1234):</p>
-      <input type="number" id="otpInput" placeholder="4-Digit OTP" maxlength="4">
-      <button class="action-btn" onclick="verifyOtpCode()">VERIFY & PLAY</button>
-      <button class="action-btn" style="background:#444; color:#fff;" onclick="backToPhone()">BACK</button>
+      <button class="action-btn" onclick="directLoginAction()">ENTER GAME LOBBY</button>
     </div>
   </div>
 
@@ -141,7 +136,7 @@
     </div>
   </div>
 
-  <!-- Friends Submenu (Host vs Join) -->
+  <!-- Friends Submenu -->
   <div id="friendsMenuModal" class="overlay" style="display:none;">
     <div class="card-modal">
       <h3 style="color:#ffd700;">PLAY WITH FRIENDS</h3>
@@ -158,7 +153,7 @@
     </div>
   </div>
 
-  <!-- Bot Submenu (Bot count, difficulty, mode) -->
+  <!-- Bot Submenu -->
   <div id="botMenuModal" class="overlay" style="display:none;">
     <div class="card-modal">
       <h3 style="color:#ffd700;">BOT MATCH SETTINGS</h3>
@@ -192,24 +187,14 @@
   <div id="howToPlayModal" class="overlay" style="display:none;">
     <div class="card-modal" style="max-height:85vh; overflow-y:auto; text-align:left; font-size:12px; line-height:1.5;">
       <h3 style="color:#ffd700; text-align:center;">♠ HOW TO PLAY</h3>
-      <b style="color:#ffd700;">1. Card Scoring:</b><br>
-      • K, Q, J = 0 points. A = 1, Numbers 2-10 = Face value.<br>
-      • Total score = 3 cards sum ka <b>Unit Digit</b> (jaise 8+7+4 = 19 -> <b>9 Points</b>).<br>
-      • <b>Trio (Highest):</b> KKK > QQQ > JJJ.<br><br>
-
-      <b style="color:#ffd700;">2. Custom Rules:</b><br>
-      • <b>Band Limit:</b> Har player round me maximum <b>4 Band</b> chal sakta hai; 4 Band ke baad cards automatically SEEN ho jayenge.<br>
-      • <b>Blind Player:</b> Normal Chaal nahi chal sakta; sirf Band ya Counter karega ya Cards dekhega.<br>
-      • <b>Side Show:</b> SEEN player pichhle SEEN player se request karega.<br><br>
-
-      <b style="color:#ffd700;">3. Table Modes:</b><br>
-      • <b>Limited:</b> Max chaal ₹120 aur Pot ₹1500 poora hote hi Auto-Show.<br>
-      • <b>Unlimited:</b> No capping.<br>
-      <button class="action-btn" style="margin-top:10px;" onclick="document.getElementById('howToPlayModal').style.display='none'">CLOSE</button>
+      <b style="color:#ffd700;">1. Scoring:</b> K,Q,J=0, A=1, 2-10=Face Value. Score = Unit sum.<br>
+      • <b>Trio:</b> KKK > QQQ > JJJ.<br><br>
+      <b style="color:#ffd700;">2. Rules:</b> Max 4 Band per player (auto-seen on 4th). Blind player normal Chaal nahi chal sakta.<br><br>
+      <button class="action-btn" onclick="document.getElementById('howToPlayModal').style.display='none'">CLOSE</button>
     </div>
   </div>
 
-  <!-- Side Show Incoming Prompt -->
+  <!-- Side Show Prompt -->
   <div id="sideShowModal" class="overlay" style="display:none;">
     <div class="card-modal">
       <h3 style="color:#ffd700;">🤝 SIDE SHOW REQUEST</h3>
@@ -254,7 +239,7 @@
 
   <div class="move-banner" id="lastMoveBanner">Game Ready...</div>
 
-  <!-- 3D Casino Table -->
+  <!-- 3D Table -->
   <div class="table-box">
     <div class="oval-table" id="tableSeats">
       <div class="pot-center">
@@ -265,7 +250,6 @@
     </div>
   </div>
 
-  <!-- Big Player Cards Hand -->
   <div class="my-hand-container" id="myBigCards"></div>
 
   <!-- Bottom Panel Controls -->
@@ -288,7 +272,7 @@
     </div>
   </div>
 
-  <!-- Live Public Chat Drawer -->
+  <!-- Chat Drawer -->
   <div id="chatDrawer">
     <div style="padding:4px 8px; background:#020503; font-weight:bold; font-size:11px; color:#ffd700; display:flex; justify-content:space-between;">
       <span>Table Chat</span>
@@ -307,6 +291,13 @@
     let currentUser = null;
     let canShowGlobally = false;
     let pendingSideShowCaller = null;
+
+    function showToast(msg) {
+      const t = document.getElementById('toastMsg');
+      t.innerText = msg;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 2500);
+    }
 
     let audioCtx = null;
     function unlockAudio() {
@@ -329,43 +320,67 @@
       } catch(e) {}
     }
 
-    function triggerVibrate(pattern = [50]) {
-      if (navigator.vibrate) navigator.vibrate(pattern);
-    }
-
-    window.addEventListener('load', () => {
-      let savedPhone = localStorage.getItem('tp_phone');
-      let savedName = localStorage.getItem('tp_name');
-      if (savedPhone) {
-        document.getElementById('userPhone').value = savedPhone;
-        if (savedName) document.getElementById('userName').value = savedName;
-        socket.emit('verifyOtp', { phone: savedPhone, otp: '1234', name: savedName });
-      }
-    });
-
-    function sendOtpRequest() {
+    function directLoginAction() {
       unlockAudio();
       const phone = document.getElementById('userPhone').value.trim();
       const name = document.getElementById('userName').value.trim();
-      if (phone.length !== 10) return alert('10-digit number dalein!');
-      socket.emit('requestOtp', { phone });
+      if (phone.length < 10) return showToast('10-digit number dalein!');
+      socket.emit('directLogin', { phone, name });
     }
 
-    socket.on('otpSent', ({ phone, otp }) => {
-      alert(`📩 OTP for ${phone}: [ ${otp} ] (Testing: 1234)`);
+    socket.on('authSuccess', (userData) => {
+      currentUser = userData;
       document.getElementById('phoneOverlay').style.display = 'none';
-      document.getElementById('otpOverlay').style.display = 'flex';
+      document.getElementById('lobbyOverlay').style.display = 'flex';
+      document.getElementById('profileName').innerText = userData.name;
+      document.getElementById('myWalletChips').innerText = userData.chips;
+      document.getElementById('userStats').innerHTML = `
+        <b style="color:#ffd700; font-size:15px;">${userData.name}</b> (${userData.phone})<br>
+        💰 Wallet: <b>₹${userData.chips}</b> | 🎮 Games: <b>${userData.gamesPlayed}</b>
+      `;
     });
 
-    function backToPhone() {
-      document.getElementById('otpOverlay').style.display = 'none';
-      document.getElementById('phoneOverlay').style.display = 'flex';
+    socket.on('authError', (msg) => showToast(msg));
+
+    function openFriendsSubMenu() {
+      document.getElementById('lobbyOverlay').style.display = 'none';
+      document.getElementById('friendsMenuModal').style.display = 'flex';
     }
 
-    function verifyOtpCode() {
+    function openBotSubMenu() {
+      document.getElementById('lobbyOverlay').style.display = 'none';
+      document.getElementById('botMenuModal').style.display = 'flex';
+    }
+
+    function backToLobby() {
+      document.getElementById('friendsMenuModal').style.display = 'none';
+      document.getElementById('botMenuModal').style.display = 'none';
+      document.getElementById('lobbyOverlay').style.display = 'flex';
+    }
+
+    function openHowToPlay() {
+      document.getElementById('howToPlayModal').style.display = 'flex';
+    }
+
+    function hostRoomAction() {
       unlockAudio();
-      const phone = document.getElementById('userPhone').value.trim();
-      const name = document.getElementById('userName').value.trim();
-      const otp = document.getElementById('otpInput').value.trim();
-      if (!otp) return alert('OTP enter karein!');
-      socket.emit('verifyOtp', {
+      let mode = document.getElementById('friendsTableMode').value;
+      socket.emit('hostRoom', { phone: currentUser.phone, tableMode: mode });
+    }
+
+    socket.on('roomHosted', ({ roomId }) => {
+      currentRoomId = roomId;
+      document.getElementById('friendsMenuModal').style.display = 'none';
+      showToast(`Room Hosted! Code: ${roomId}`);
+    });
+
+    function joinRoomAction() {
+      unlockAudio();
+      let code = document.getElementById('joinRoomCode').value.trim();
+      if (!code) return showToast('Room code dalein!');
+      currentRoomId = code;
+      document.getElementById('friendsMenuModal').style.display = 'none';
+      socket.emit('joinOrCreateRoom', { roomId: code, phone: currentUser.phone });
+    }
+
+    

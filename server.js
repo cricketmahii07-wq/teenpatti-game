@@ -74,7 +74,7 @@ function handleTimeout(room) {
   activePlayer.missedTurns = (activePlayer.missedTurns || 0) + 1;
 
   if (activePlayer.missedTurns >= 2 && !activePlayer.isBot) {
-    io.to(activePlayer.socketId).emit('kicked', '2 turns miss karne ki wajah se remove kiya gaya.');
+    io.to(activePlayer.socketId).emit('kicked', '2 turns miss karne ki wajah se table se hata diya gaya.');
     room.players = room.players.filter(p => p.phone !== activePlayer.phone);
   }
 
@@ -105,7 +105,7 @@ function startRound(room) {
 
   room.players.forEach(p => {
     p.missedTurns = 0;
-    p.bandCount = 0;
+    p.bandCount = 0; // Per-player 4-band limit reset
     if (p.chips >= 1) {
       p.chips -= 1;
       room.pot += 1;
@@ -197,8 +197,8 @@ function sanitizeRoomState(room, phone) {
     timeLeft: room.timeLeft || 30,
     canShow: canShowNow,
     canSideShow: canSideShow,
-    tableMode: room.tableMode,
-    botDifficulty: room.botDifficulty,
+    tableMode: room.tableMode || 'unlimited',
+    botDifficulty: room.botDifficulty || 'medium',
     isRoundActive: room.isRoundActive,
     totalPlayers: room.players.length,
     activeCount: alive.length,
@@ -357,7 +357,6 @@ function executeBotAction(room, bot) {
 }
 
 io.on('connection', (socket) => {
-  // Direct instant registration / login
   socket.on('directLogin', ({ phone, name }) => {
     if (!phone || phone.length < 10) return socket.emit('authError', '10-digit number dalein!');
     if (!users[phone]) {
@@ -463,7 +462,7 @@ io.on('connection', (socket) => {
     const user = users[phone];
     if (!user) return socket.emit('errorMsg', 'Login expire ho gaya!');
 
-    const roomId = 'BOT_' + Math.floor(1000 + Math.random() * 9000);
+    const roomId = 'BOT_' + Math.floor(1000 + Math.random() * 9000).toString();
     const count = Math.min(Math.max(parseInt(botCount) || 1, 1), 4);
 
     let room = {

@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>VIP Teen Patti Pro</title>
+  <title>VIP Teen Patti Club</title>
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
-    body { background: #020704; color: #fff; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    body { background: #030804; color: #fff; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
     /* Modals & Overlays */
     .overlay { position: fixed; inset: 0; background: rgba(2, 6, 3, 0.96); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; }
@@ -22,6 +22,14 @@
       background: #d32f2f; color: #fff; padding: 8px 16px; border-radius: 20px;
       font-size: 12px; font-weight: bold; z-index: 150; display: none; box-shadow: 0 4px 10px rgba(0,0,0,0.8);
     }
+
+    /* Game Loading Overlay (Point 2) */
+    #loadingOverlay {
+      position: fixed; inset: 0; background: rgba(1, 4, 2, 0.97); z-index: 120;
+      display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    }
+    .spinner-chips { width: 60px; height: 60px; border: 6px solid #13381e; border-top: 6px solid #ffd700; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
 
     /* Top Navigation */
     .top { padding: 8px 12px; background: #020503; display: flex; justify-content: space-between; align-items: center; z-index: 10; border-bottom: 2px solid #143d22; }
@@ -62,6 +70,13 @@
     .mini-card { width: 22px; height: 32px; background: #fff; color: #000; border-radius: 3px; font-weight: bold; font-size: 10px; display: flex; align-items: center; justify-content: center; }
     .mini-card.back { background: #880e4f; color: #ffd700; font-size: 8px; font-weight: 900; }
     .mini-card.red { color: #d32f2f; }
+
+    /* Card Dealing Swoosh Animation (Point 3) */
+    @keyframes dealFromDeck {
+      0% { transform: translate(0, -180px) scale(0.3); opacity: 0; }
+      100% { transform: translate(0, 0) scale(1); opacity: 1; }
+    }
+    .dealing-active { animation: dealFromDeck 0.5s ease-out forwards; }
 
     /* Big Cards Hand with ADDI Branding */
     .my-hand-container {
@@ -114,25 +129,49 @@
 
   <div id="toastMsg"></div>
 
-  <!-- STEP 1: Phone Login -->
+  <!-- Loading Animation Overlay (Point 2) -->
+  <div id="loadingOverlay">
+    <div class="spinner-chips"></div>
+    <div style="color:#ffd700; font-weight:bold; font-size:15px; letter-spacing:1px;">ENTERING CASINO TABLE...</div>
+  </div>
+
+  <!-- STEP 1: Phone Login (Point 1: 2-Step OTP System) -->
   <div id="phoneOverlay" class="overlay">
     <div class="card-modal">
       <h2 style="color:#ffd700;">♠ REGISTER / LOGIN</h2>
+      <p style="font-size:12px; color:#aaa;">Enter your mobile number to get OTP:</p>
       <input type="tel" id="userPhone" placeholder="Mobile Number (10 Digit)" maxlength="10">
       <input type="text" id="userName" placeholder="Your Name">
-      <button class="action-btn" onclick="directLoginAction()">ENTER GAME LOBBY</button>
+      <button class="action-btn" onclick="sendOtpAction()">GET OTP</button>
     </div>
   </div>
 
-  <!-- Main Menu / Lobby -->
-  <div id="lobbyOverlay" class="overlay" style="display:none;">
+  <!-- STEP 2: OTP Verification Dialog (Point 1) -->
+  <div id="otpOverlay" class="overlay" style="display:none;">
     <div class="card-modal">
-      <h2 style="color:#ffd700;">MAIN LOBBY</h2>
-      <div id="userStats" style="font-size:12px; text-align:center;"></div>
+      <h2 style="color:#ffd700;">VERIFY OTP</h2>
+      <p id="otpPromptInfo" style="font-size:12px; color:#ccc; text-align:center;">OTP sent successfully</p>
+      <input type="number" id="otpInput" placeholder="4-Digit OTP" maxlength="4">
+      <button class="action-btn" onclick="verifyOtpAction()">VERIFY & ENTER LOBBY</button>
+      <button class="action-btn" style="background:#444; color:#fff;" onclick="backToPhoneInput()">CHANGE NUMBER</button>
+    </div>
+  </div>
+
+  <!-- Enhanced VIP Lobby (Point 5) -->
+  <div id="lobbyOverlay" class="overlay" style="display:none;">
+    <div class="card-modal" style="max-width:350px;">
+      <h2 style="color:#ffd700; letter-spacing:1px;">VIP CLUB LOBBY</h2>
       
+      <!-- User Profile Card -->
+      <div id="userStats" style="background:rgba(0,0,0,0.5); border:1px solid #1e5230; border-radius:10px; padding:10px; width:100%; font-size:12px; text-align:center; line-height:1.6;"></div>
+      
+      <!-- Rejoin Button (Point 7) -->
+      <button id="btnRejoinOngoing" class="action-btn" style="background:linear-gradient(180deg,#00e676,#00897b); display:none;" onclick="rejoinTableAction()">⚡ REJOIN ONGOING TABLE</button>
+
       <button class="action-btn" onclick="openFriendsSubMenu()">👥 PLAY WITH FRIENDS</button>
-      <button class="action-btn" style="background:linear-gradient(180deg,#00e676,#00897b);" onclick="openBotSubMenu()">🤖 PLAY WITH BOTS</button>
+      <button class="action-btn" style="background:linear-gradient(180deg,#ffa726,#f57c00);" onclick="openBotSubMenu()">🤖 PLAY WITH AI BOTS</button>
       <button class="action-btn" style="background:#13381e; color:#ffd700; border:1px solid #ffd700;" onclick="openHowToPlay()">📖 HOW TO PLAY</button>
+      <button class="action-btn" style="background:#444; color:#fff; padding:6px; font-size:12px;" onclick="logoutAction()">LOGOUT</button>
     </div>
   </div>
 
@@ -156,7 +195,7 @@
   <!-- Bot Submenu -->
   <div id="botMenuModal" class="overlay" style="display:none;">
     <div class="card-modal">
-      <h3 style="color:#ffd700;">BOT MATCH SETTINGS</h3>
+      <h3 style="color:#ffd700;">AI BOT MATCH</h3>
       <label style="font-size:11px; color:#aaa; align-self:flex-start;">Bots Count:</label>
       <select id="botCountSelect">
         <option value="1">1 Bot (1 vs 1)</option>
@@ -224,11 +263,12 @@
     </div>
   </div>
 
-  <!-- Top Bar -->
+  <!-- Top Bar with Table Exit Option (Point 7) -->
   <div class="top">
     <div>
+      <button onclick="leaveTableToLobby()" style="background:#b71c1c; border:1px solid #ffd700; color:#fff; border-radius:8px; padding:3px 8px; font-weight:bold; font-size:10px; cursor:pointer;">🚪 EXIT</button>
       Room: <b id="displayRoomId" style="color:#ffd700;">-</b>
-      <button onclick="toggleChat()" style="background:#13381e; border:1px solid #ffd700; color:#ffd700; border-radius:8px; padding:2px 8px; cursor:pointer; font-size:11px; margin-left:6px; font-weight:bold;">💬 CHAT</button>
+      <button onclick="toggleChat()" style="background:#13381e; border:1px solid #ffd700; color:#ffd700; border-radius:8px; padding:2px 8px; cursor:pointer; font-size:10px; margin-left:4px; font-weight:bold;">💬 CHAT</button>
     </div>
     <div class="profile-badge">
       <span id="profileName">User</span> | <b>₹<span id="myWalletChips">500</span></b>
@@ -320,61 +360,91 @@
       } catch(e) {}
     }
 
-    function directLoginAction() {
+    // Point 6: Persistent Data Storage
+    window.addEventListener('load', () => {
+      let savedPhone = localStorage.getItem('tp_saved_phone');
+      let savedName = localStorage.getItem('tp_saved_name');
+      if (savedPhone) {
+        document.getElementById('userPhone').value = savedPhone;
+        if (savedName) document.getElementById('userName').value = savedName;
+        socket.emit('restoreSession', { phone: savedPhone });
+      }
+    });
+
+    // Point 1: Proper 2-Step OTP System
+    function sendOtpAction() {
       unlockAudio();
-      const phoneInput = document.getElementById('userPhone');
-      const nameInput = document.getElementById('userName');
-      
-      const phone = phoneInput ? phoneInput.value.trim() : "";
-      const name = nameInput ? nameInput.value.trim() : "";
+      const phone = document.getElementById('userPhone').value.trim();
+      const name = document.getElementById('userName').value.trim();
 
-      if (!phone || phone.length < 10) {
-        showToast('10-digit mobile number dalein!');
-        return;
-      }
+      if (phone.length < 10) return showToast('10-digit number dalein!');
+      localStorage.setItem('tp_saved_phone', phone);
+      if (name) localStorage.setItem('tp_saved_name', name);
 
-      const btn = document.querySelector('#phoneOverlay .action-btn');
-      if (btn) {
-        btn.innerText = "CONNECTING...";
-        btn.disabled = true;
-      }
+      socket.emit('requestOtp', { phone });
+    }
 
-      if (!socket.connected) socket.connect();
-      socket.emit('directLogin', { phone, name });
+    socket.on('otpSent', ({ phone, otp }) => {
+      document.getElementById('phoneOverlay').style.display = 'none';
+      document.getElementById('otpOverlay').style.display = 'flex';
+      document.getElementById('otpPromptInfo').innerHTML = `OTP for <b>${phone}</b>: <span style="color:#ffd700; font-size:16px;">[ ${otp} ]</span><br><span style="font-size:10px; color:#888;">(Testing: 1234 bhi chalega)</span>`;
+    });
 
-      setTimeout(() => {
-        if (document.getElementById('phoneOverlay').style.display !== 'none') {
-          currentUser = {
-            phone: phone,
-            name: name || `Player_${phone.slice(-4)}`,
-            chips: 500,
-            gamesPlayed: 0
-          };
-          document.getElementById('phoneOverlay').style.display = 'none';
-          document.getElementById('lobbyOverlay').style.display = 'flex';
-          document.getElementById('profileName').innerText = currentUser.name;
-          document.getElementById('myWalletChips').innerText = currentUser.chips;
-          document.getElementById('userStats').innerHTML = `
-            <b style="color:#ffd700; font-size:15px;">${currentUser.name}</b> (${currentUser.phone})<br>
-            💰 Wallet: <b>₹${currentUser.chips}</b> | 🎮 Games: <b>0</b>
-          `;
-        }
-      }, 800);
+    function backToPhoneInput() {
+      document.getElementById('otpOverlay').style.display = 'none';
+      document.getElementById('phoneOverlay').style.display = 'flex';
+    }
+
+    function verifyOtpAction() {
+      unlockAudio();
+      const phone = document.getElementById('userPhone').value.trim();
+      const name = document.getElementById('userName').value.trim();
+      const otp = document.getElementById('otpInput').value.trim();
+
+      if (!otp) return showToast('OTP enter karein!');
+      socket.emit('verifyOtp', { phone, otp, name });
     }
 
     socket.on('authSuccess', (userData) => {
       currentUser = userData;
+      localStorage.setItem('tp_saved_phone', userData.phone);
+      localStorage.setItem('tp_saved_name', userData.name);
+
       document.getElementById('phoneOverlay').style.display = 'none';
+      document.getElementById('otpOverlay').style.display = 'none';
       document.getElementById('lobbyOverlay').style.display = 'flex';
+
       document.getElementById('profileName').innerText = userData.name;
       document.getElementById('myWalletChips').innerText = userData.chips;
+
+      let winRate = userData.gamesPlayed ? Math.round((userData.gamesWon / userData.gamesPlayed) * 100) : 0;
       document.getElementById('userStats').innerHTML = `
-        <b style="color:#ffd700; font-size:15px;">${userData.name}</b> (${userData.phone})<br>
-        💰 Wallet: <b>₹${userData.chips}</b> | 🎮 Games: <b>${userData.gamesPlayed}</b>
+        <b style="color:#ffd700; font-size:16px;">${userData.name}</b><br>
+        📱 <b>${userData.phone}</b> | 💰 Wallet: <b style="color:#00e676;">₹${userData.chips}</b><br>
+        🎮 Games Played: <b>${userData.gamesPlayed}</b> | 🏆 Won: <b>${userData.gamesWon}</b> (${winRate}%)
       `;
+
+      // Check Ongoing Rejoin Eligibility (Point 7)
+      let activeRoom = userData.activeRoomId || localStorage.getItem('tp_active_room');
+      let rejoinBtn = document.getElementById('btnRejoinOngoing');
+      if (activeRoom) {
+        rejoinBtn.style.display = 'block';
+        rejoinBtn.innerText = `⚡ REJOIN TABLE (${activeRoom})`;
+      } else {
+        rejoinBtn.style.display = 'none';
+      }
     });
 
     socket.on('authError', (msg) => showToast(msg));
+
+    // Point 2: Game Loading Animation Helper
+    function triggerLoadingAndEnter(callback) {
+      document.getElementById('loadingOverlay').style.display = 'flex';
+      setTimeout(() => {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        callback();
+      }, 1200);
+    }
 
     function openFriendsSubMenu() {
       document.getElementById('lobbyOverlay').style.display = 'none';
@@ -399,11 +469,14 @@
     function hostRoomAction() {
       unlockAudio();
       let mode = document.getElementById('friendsTableMode').value;
-      socket.emit('hostRoom', { phone: currentUser.phone, tableMode: mode });
+      triggerLoadingAndEnter(() => {
+        socket.emit('hostRoom', { phone: currentUser.phone, tableMode: mode });
+      });
     }
 
     socket.on('roomHosted', ({ roomId }) => {
       currentRoomId = roomId;
+      localStorage.setItem('tp_active_room', roomId);
       document.getElementById('friendsMenuModal').style.display = 'none';
       showToast(`Room Hosted! Code: ${roomId}`);
     });
@@ -412,9 +485,12 @@
       unlockAudio();
       let code = document.getElementById('joinRoomCode').value.trim();
       if (!code) return showToast('Room code dalein!');
-      currentRoomId = code;
-      document.getElementById('friendsMenuModal').style.display = 'none';
-      socket.emit('joinOrCreateRoom', { roomId: code, phone: currentUser.phone });
+      triggerLoadingAndEnter(() => {
+        currentRoomId = code;
+        localStorage.setItem('tp_active_room', code);
+        document.getElementById('friendsMenuModal').style.display = 'none';
+        socket.emit('joinOrCreateRoom', { roomId: code, phone: currentUser.phone });
+      });
     }
 
     function startBotMatch() {
@@ -422,10 +498,45 @@
       let botCount = document.getElementById('botCountSelect').value;
       let difficulty = document.getElementById('botDifficultySelect').value;
       let tableMode = document.getElementById('botTableModeSelect').value;
-      document.getElementById('botMenuModal').style.display = 'none';
-      socket.emit('createBotRoom', { phone: currentUser.phone, botCount, difficulty, tableMode });
+      triggerLoadingAndEnter(() => {
+        document.getElementById('botMenuModal').style.display = 'none';
+        socket.emit('createBotRoom', { phone: currentUser.phone, botCount, difficulty, tableMode });
+      });
     }
 
+    // Point 7: Exit Table & Rejoin
+    function leaveTableToLobby() {
+      if (currentRoomId) {
+        socket.emit('leaveTable', { roomId: currentRoomId, phone: currentUser.phone });
+      }
+      document.getElementById('lobbyOverlay').style.display = 'flex';
+      let rejoinBtn = document.getElementById('btnRejoinOngoing');
+      if (currentRoomId) {
+        rejoinBtn.style.display = 'block';
+        rejoinBtn.innerText = `⚡ REJOIN TABLE (${currentRoomId})`;
+      }
+    }
+
+    function rejoinTableAction() {
+      let roomToRejoin = currentUser.activeRoomId || localStorage.getItem('tp_active_room') || currentRoomId;
+      if (!roomToRejoin) return showToast('Koi ongoing table nahi hai!');
+      triggerLoadingAndEnter(() => {
+        document.getElementById('lobbyOverlay').style.display = 'none';
+        currentRoomId = roomToRejoin;
+        socket.emit('joinOrCreateRoom', { roomId: roomToRejoin, phone: currentUser.phone });
+      });
+    }
+
+    socket.on('rejoinedSuccess', ({ roomId }) => {
+      showToast(`Rejoined ongoing table: ${roomId}`);
+    });
+
+    function logoutAction() {
+      localStorage.clear();
+      location.reload();
+    }
+
+    // Side Show
     function requestSideShowAction() {
       socket.emit('requestSideShow', { roomId: currentRoomId, phone: currentUser.phone });
     }
@@ -441,6 +552,7 @@
       socket.emit('respondSideShow', { roomId: currentRoomId, accepted, callerPhone: pendingSideShowCaller, phone: currentUser.phone });
     }
 
+    // Chat
     function toggleChat() {
       let d = document.getElementById('chatDrawer');
       d.style.display = d.style.display === 'flex' ? 'none' : 'flex';
@@ -461,6 +573,14 @@
       div.innerHTML = `<b style="color:#ffd700;">${sender}:</b> ${text} <span style="font-size:9px; color:#888;">${time}</span>`;
       container.appendChild(div);
       container.scrollTop = container.scrollHeight;
+    });
+
+    // Round Started with Dealing Animation (Point 3)
+    socket.on('roundStarted', () => {
+      playBeep(880, 0.2);
+      const container = document.getElementById('myBigCards');
+      container.classList.add('dealing-active');
+      setTimeout(() => container.classList.remove('dealing-active'), 600);
     });
 
     socket.on('gameState', (state) => {
@@ -489,10 +609,8 @@
       if (isYourTurn) playBeep(700, 0.15);
 
       document.getElementById('btnSee').disabled = isSinglePlayer || !(isYourTurn && you.state === 'blind');
-      
       let canBand = isYourTurn && you.state === 'blind' && (you.bandCount || 0) < 4;
       document.getElementById('btnBand').disabled = isSinglePlayer || !canBand;
-      
       document.getElementById('btnCounter').disabled = isSinglePlayer || !(isYourTurn && you.state === 'blind' && state.lastMoveWasSeen);
       document.getElementById('btnChaal').disabled = isSinglePlayer || !(isYourTurn && you.state === 'seen');
       document.getElementById('btnSideShow').disabled = isSinglePlayer || !(isYourTurn && state.canSideShow);
@@ -553,7 +671,7 @@
         seatDiv.innerHTML = `
           <div class="p-box">
             <b>${p.name}</b><br>
-            ₹${p.chips} | <span style="color:#ffd700;">${p.isWaiting ? 'WAIT' : (p.folded ? 'FOLD' : p.state.toUpperCase())}</span>
+            ₹${p.chips} | <span style="color:#ffd700;">${!p.isOnline ? 'OFFLINE' : (p.isWaiting ? 'WAIT' : (p.folded ? 'FOLD' : p.state.toUpperCase()))}</span>
           </div>
           <div class="mini-cards">${p.isWaiting ? '' : cardHtml}</div>
         `;

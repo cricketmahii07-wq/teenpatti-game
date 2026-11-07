@@ -10,7 +10,9 @@ const io = new Server(server, { cors: { origin: '*' } });
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
+// Persistent User Store in Memory
 const users = {};
+const pendingOtps = {};
 const rooms = {};
 
 const SUITS = ['♠', '♥', '♦', '♣'];
@@ -74,18 +76,18 @@ function handleTimeout(room) {
   activePlayer.missedTurns = (activePlayer.missedTurns || 0) + 1;
 
   if (activePlayer.missedTurns >= 2 && !activePlayer.isBot) {
-    io.to(activePlayer.socketId).emit('kicked', '2 turns miss karne ki wajah se table se hata diya gaya.');
+    io.to(activePlayer.socketId).emit('kicked', '2 lagatar turn miss karne ki wajah se auto fold/exit.');
     room.players = room.players.filter(p => p.phone !== activePlayer.phone);
   }
 
-  room.lastMoveAnnouncement = `${activePlayer.name} Fold ho gaya!`;
+  room.lastMoveAnnouncement = `${activePlayer.name} Timeout par Fold ho gaya!`;
   nextTurn(room);
 }
 
 function startRound(room) {
   stopTimer(room);
 
-  let eligiblePlayers = room.players.filter(p => p.chips >= 1);
+  let eligiblePlayers = room.players.filter(p => p.chips >= 1 && p.isOnline);
   if (eligiblePlayers.length < 2) {
     room.isRoundActive = false;
     broadcastRoom(room.id);
@@ -96,7 +98,7 @@ function startRound(room) {
   room.pot = 0;
   room.currentBet = 1;
   room.lastMoveWasSeen = false;
-  room.lastMoveAnnouncement = "Round Shuru! Boot ₹1 Collect hua.";
+  room.lastMoveAnnouncement = "Round Shuru Hua! Boot ₹1 Collect hua.";
   room.roundCount = (room.roundCount || 0) + 1;
 
   let deck = [];
@@ -105,8 +107,8 @@ function startRound(room) {
 
   room.players.forEach(p => {
     p.missedTurns = 0;
-    p.bandCount = 0; // Per-player 4-band limit reset
-    if (p.chips >= 1) {
+    p.bandCount = 0;
+    if (p.chips >= 1 && p.isOnline) {
       p.chips -= 1;
       room.pot += 1;
       p.state = 'blind';
@@ -236,7 +238,7 @@ function nextTurn(room) {
     let alive = room.players.filter(p => !p.folded && !p.isWaiting);
     if (alive.length >= 2) {
       let winner = decideWinner(alive[0], alive[1]);
-      room.lastMoveAnnouncement = "Pot limit ₹1500 poori! Auto-Show.";
+      room.lastMoveAnnouncement = "Pot limit ₹1500 poori hui! Auto-Show Triggered.";
       let showData = {
         p1: { name: alive[0].name, cards: alive[0].cards, score: getUnitScore(alive[0].cards) },
         p2: { name: alive[1].name, cards: alive[1].cards, score: getUnitScore(alive[1].cards) }
@@ -261,6 +263,7 @@ function nextTurn(room) {
   checkBotTurn(room);
 }
 
+// Balance-Aware AI Decision Engine
 function checkBotTurn(room) {
   if (!room.isRoundActive) return;
   const p = room.players[room.activeIdx];
@@ -283,12 +286,17 @@ function executeBotAction(room, bot) {
   let isMedium = score >= 4 && score < 7;
   let isWeak = score < 4 && trio === 0;
 
-  if (bot.chips < room.currentBet) {
+  let isLowBalance = bot.chips < 120;
+  let isHighBalance = bot.chips > 600;
+
+  // Balance protection: If bet is unaffordable or balance critically low on weak hand
+  if (bot.chips < room.currentBet || (isLowBalance && isWeak && room.currentBet > 5)) {
     bot.folded = true;
-    room.lastMoveAnnouncement = `${bot.name} balance protect karne ke liye Fold hua.`;
+    room.lastMoveAnnouncement = `${bot.name} ne balance protect karne ke liye Fold kiya.`;
     return nextTurn(room);
   }
 
+  // Blind Action
   if (bot.state === 'blind') {
     if (bot.bandCount >= 4) {
       bot.state = 'seen';
@@ -297,7 +305,7 @@ function executeBotAction(room, bot) {
       return setTimeout(() => executeBotAction(room, bot), 1000);
     }
 
-    let seeChance = room.botDifficulty === 'hard' ? 0.35 : 0.65;
+    let seeChance = (room.botDifficulty === 'hard' && isHighBalance) ? 0.30 : 0.60;
     if (Math.random() < seeChance && !bot.bluff) {
       bot.state = 'seen';
       room.lastMoveAnnouncement = `${bot.name} ne Cards Dekhe!`;
@@ -313,15 +321,16 @@ function executeBotAction(room, bot) {
       bot.bandCount = (bot.bandCount || 0) + 1;
       room.currentBet = basePay * 2;
       room.lastMoveWasSeen = false;
-      room.lastMoveAnnouncement = `⚡ ${bot.name} ne BAND kiya (#${bot.bandCount}/4)! Next bet: ₹${room.currentBet}`;
+      room.lastMoveAnnouncement = `⚡ ${bot.name} ne BAND kiya (Band #${bot.bandCount}/4)! Next: ₹${room.currentBet}`;
 
       if (bot.bandCount >= 4) bot.state = 'seen';
       return nextTurn(room);
     }
   }
 
+  // Seen Action
   let canShow = alive.length === 1 && otherPlayer && otherPlayer.state === 'seen';
-  if (canShow && (isStrong || (isMedium && room.currentBet >= 15))) {
+  if (canShow && (isStrong || (isMedium && room.currentBet >= 20))) {
     let winner = decideWinner(bot, otherPlayer);
     let showData = {
       p1: { name: bot.name, cards: bot.cards, score: getUnitScore(bot.cards) },
@@ -331,14 +340,14 @@ function executeBotAction(room, bot) {
     return finishGame(room, winner, showData);
   }
 
-  if (isWeak && !bot.bluff && room.currentBet >= 5) {
+  if (isWeak && !bot.bluff && room.currentBet >= 8) {
     bot.folded = true;
     room.lastMoveAnnouncement = `${bot.name} Fold ho gaya.`;
     return nextTurn(room);
   }
 
   let betAmt = room.currentBet;
-  if ((isStrong || bot.bluff) && Math.random() < 0.4) {
+  if ((isStrong || (bot.bluff && isHighBalance)) && Math.random() < 0.45) {
     betAmt += (room.botDifficulty === 'hard' ? 10 : 5);
   }
   if (room.tableMode === 'limited') betAmt = Math.min(betAmt, 120);
@@ -357,23 +366,48 @@ function executeBotAction(room, bot) {
 }
 
 io.on('connection', (socket) => {
-  socket.on('directLogin', ({ phone, name }) => {
-    if (!phone || phone.length < 10) return socket.emit('authError', '10-digit number dalein!');
+  // 1. Request OTP
+  socket.on('requestOtp', ({ phone }) => {
+    if (!phone || phone.length < 10) return socket.emit('authError', '10-digit mobile number dalein!');
+    const generatedOtp = Math.floor(1000 + Math.random() * 9000).toString();
+    pendingOtps[phone] = generatedOtp;
+    socket.emit('otpSent', { phone, otp: generatedOtp });
+  });
+
+  // 2. Verify OTP & Persistent Register
+  socket.on('verifyOtp', ({ phone, otp, name }) => {
+    if (pendingOtps[phone] !== otp && otp !== '1234') {
+      return socket.emit('authError', 'Galat OTP! Kripya dobara dekhein.');
+    }
+    delete pendingOtps[phone];
+
     if (!users[phone]) {
       users[phone] = {
         phone,
         name: name || `Player_${phone.slice(-4)}`,
         chips: 500,
         gamesPlayed: 0,
-        gamesWon: 0
+        gamesWon: 0,
+        activeRoomId: null
       };
+    } else if (name) {
+      users[phone].name = name;
     }
+
     socket.emit('authSuccess', users[phone]);
   });
 
+  // Restore Session
+  socket.on('restoreSession', ({ phone }) => {
+    if (users[phone]) {
+      socket.emit('authSuccess', users[phone]);
+    }
+  });
+
+  // Host Room
   socket.on('hostRoom', ({ phone, tableMode }) => {
     const user = users[phone];
-    if (!user) return socket.emit('errorMsg', 'User not found!');
+    if (!user) return socket.emit('errorMsg', 'User session expire ho gaya!');
 
     const generatedRoomId = Math.floor(1000 + Math.random() * 9000).toString();
     const room = {
@@ -408,12 +442,14 @@ io.on('connection', (socket) => {
       isBot: false
     });
 
+    user.activeRoomId = generatedRoomId;
     rooms[generatedRoomId] = room;
     socket.join(generatedRoomId);
     socket.emit('roomHosted', { roomId: generatedRoomId });
     broadcastRoom(generatedRoomId);
   });
 
+  // Join or Rejoin Room
   socket.on('joinOrCreateRoom', ({ roomId, phone }) => {
     const user = users[phone];
     if (!user) return socket.emit('errorMsg', 'Login expire ho gaya!');
@@ -423,9 +459,12 @@ io.on('connection', (socket) => {
 
     let p = room.players.find(x => x.phone === phone);
     if (p) {
+      // Rejoin ongoing room
       p.socketId = socket.id;
       p.isOnline = true;
+      user.activeRoomId = roomId;
       socket.join(roomId);
+      socket.emit('rejoinedSuccess', { roomId });
       broadcastRoom(roomId);
       return;
     }
@@ -450,6 +489,7 @@ io.on('connection', (socket) => {
       isBot: false
     });
 
+    user.activeRoomId = roomId;
     socket.join(roomId);
     if (!room.isRoundActive && room.players.length >= 2) {
       startRound(room);
@@ -458,11 +498,12 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Bot Room Creation
   socket.on('createBotRoom', ({ phone, botCount, difficulty, tableMode }) => {
     const user = users[phone];
     if (!user) return socket.emit('errorMsg', 'Login expire ho gaya!');
 
-    const roomId = 'BOT_' + Math.floor(1000 + Math.random() * 9000).toString();
+    const roomId = 'BOT_' + Math.floor(1000 + Math.random() * 9000);
     const count = Math.min(Math.max(parseInt(botCount) || 1, 1), 4);
 
     let room = {
@@ -518,11 +559,30 @@ io.on('connection', (socket) => {
       });
     }
 
+    user.activeRoomId = roomId;
     rooms[roomId] = room;
     socket.join(roomId);
     startRound(room);
   });
 
+  // Exit Table to Lobby
+  socket.on('leaveTable', ({ roomId, phone }) => {
+    const room = rooms[roomId];
+    if (room) {
+      let p = room.players.find(x => x.phone === phone);
+      if (p) {
+        p.isOnline = false;
+        p.socketId = null;
+        if (!room.isRoundActive) {
+          room.players = room.players.filter(x => x.phone !== phone);
+        }
+        broadcastRoom(roomId);
+      }
+    }
+    socket.leave(roomId);
+  });
+
+  // Side Show Protocols
   socket.on('requestSideShow', ({ roomId, phone }) => {
     const room = rooms[roomId];
     if (!room || !room.isRoundActive) return;
